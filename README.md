@@ -2,6 +2,8 @@
 
 Open-source medical development toolkit for healthcare AI applications.
 
+**Built on MedDevKit Context 1.0** — An extensible plugin architecture for medical text processing.
+
 ## Why MedDevKit?
 
 Generic RAG chunkers fail on medical text:
@@ -92,6 +94,67 @@ const chunker = new MedicalChunker({
 // "Patient denies chest pain" -> { negatedText: "chest pain", type: "denied" }
 ```
 
+### Plugin System
+
+Extend MedDevKit with custom pattern detection via the plugin architecture:
+
+```typescript
+import { MedicalChunker } from '@meddevkit/chunker';
+import type { PatternPlugin, MedDevKitContext } from '@meddevkit/chunker';
+
+const myPlugin: PatternPlugin = {
+  id: '@myorg/medication-plugin',
+  name: 'Medication Pattern Plugin',
+  version: '1.0.0',
+  minContextVersion: '1.0.0',
+
+  detectPatterns(text: string, ctx: MedDevKitContext) {
+    const matches = [];
+    const regex = /(\w+)\s+(\d+)\s*(mg|mcg|ml)/gi;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      matches.push({
+        patternId: 'medication-dose',
+        patternName: 'Medication Dosage',
+        pluginId: '@myorg/medication-plugin',
+        startOffset: match.index,
+        endOffset: match.index + match[0].length,
+        raw: match[0],
+        confidence: 0.9,
+        isProtected: true, // Prevents splitting on this pattern
+        category: 'medication',
+        data: {
+          medication: match[1],
+          dose: parseInt(match[2]),
+          unit: match[3],
+        },
+      });
+    }
+    return matches;
+  },
+};
+
+const chunker = new MedicalChunker({
+  plugins: [myPlugin],
+  includePluginPatterns: true,
+});
+
+const result = chunker.chunk('Patient taking aspirin 81 mg daily.');
+// result.metadata.pluginsApplied: ['@myorg/medication-plugin']
+// result.chunks[0].metadata.pluginPatterns: { '@myorg/medication-plugin': [...] }
+```
+
+Plugins can be published to npm as `@meddevkit/plugin-*` packages for community sharing.
+
+**Plugin Lifecycle Hooks:**
+- `onRegister` — Called when plugin is registered
+- `onDocumentStart` — Called before processing begins
+- `onPatternsCollected` — Modify all collected patterns
+- `onChunkCreated` — Modify individual chunks
+- `onDocumentEnd` — Called after processing completes
+- `onUnload` — Cleanup when plugin is removed
+
 ## API Reference
 
 ### MedicalChunker
@@ -107,6 +170,55 @@ interface MedicalChunkerConfig {
   preserveSentences?: boolean;   // Default: true
   detectNegations?: boolean;     // Default: false
   customPreservePatterns?: RegExp[];
+
+  // Plugin System
+  plugins?: PatternPlugin[];     // Custom pattern plugins
+  includePluginPatterns?: boolean;  // Attach patterns to chunks (Default: false)
+  strictPluginCompatibility?: boolean;  // Throw on version mismatch (Default: false)
+}
+```
+
+### PatternPlugin
+
+```typescript
+interface PatternPlugin {
+  readonly id: string;           // Unique identifier (e.g., '@myorg/plugin-name')
+  readonly name: string;         // Human-readable name
+  readonly version: string;      // Plugin version (semver)
+  readonly minContextVersion: string;  // Minimum MedDevKit Context version
+
+  // Pattern Detection
+  detectPatterns?(text: string, ctx: MedDevKitContext): PatternMatch[];
+  getProtectedRanges?(text: string, ctx: MedDevKitContext): ProtectedRange[];
+  annotateChunk?(chunk: MedicalChunk, ctx: MedDevKitContext): ChunkAnnotations;
+
+  // Lifecycle Hooks
+  onRegister?(ctx: MedDevKitContext): void | Promise<void>;
+  onDocumentStart?(document: { text: string }, ctx: MedDevKitContext): void;
+  onPatternsCollected?(patterns: PatternMatch[], ctx: MedDevKitContext): PatternMatch[];
+  onChunkCreated?(chunk: MedicalChunk, ctx: MedDevKitContext): MedicalChunk;
+  onDocumentEnd?(result: ChunkingResult, ctx: MedDevKitContext): void;
+  onUnload?(): void;
+}
+```
+
+### MedDevKitContext
+
+The context object passed to plugins with utilities and version information:
+
+```typescript
+interface MedDevKitContext {
+  readonly brandVersion: string;    // "MedDevKit Context 1.0"
+  readonly contextVersion: string;  // "1.0.0" (semver)
+  readonly text: string;            // Document text
+  readonly features: ContextFeatures;
+
+  // Utilities
+  estimateTokens(text: string): number;
+  estimateCharsForTokens(tokens: number): number;
+  matchPattern(pattern: RegExp): Array<{ match: RegExpExecArray; start: number; end: number }>;
+  hasFeature(feature: keyof ContextFeatures): boolean;
+  addProtectedRange(start: number, end: number): void;
 }
 ```
 
@@ -145,9 +257,11 @@ Contact us about **MedDevKit Cloud** or consulting services.
 
 | Package | Description | Status |
 |---------|-------------|--------|
-| [@meddevkit/chunker](./packages/chunker) | PHI-aware medical text chunker | Available |
+| [@meddevkit/chunker](./packages/chunker) | PHI-aware medical text chunker with plugin system | Available |
 | @meddevkit/terminology | Medical term normalizer | Coming soon |
 | @meddevkit/retrieval | Cascading medical retrieval | Coming soon |
+
+Community plugins follow the `@meddevkit/plugin-*` naming convention.
 
 ## Development
 
@@ -179,4 +293,4 @@ MIT - See [LICENSE](LICENSE)
 
 ---
 
-Built with expertise from production healthcare AI systems.
+Built with expertise from production healthcare AI systems. Powered by MedDevKit Context 1.0.

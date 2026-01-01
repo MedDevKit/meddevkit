@@ -30,6 +30,7 @@ import type {
   NegationContext,
   ProtectedRange,
   SplitReason,
+  PatternMatch,
 } from './types';
 
 import {
@@ -46,6 +47,12 @@ import {
   normalizeText,
   findBestSplitPoint,
 } from './utils';
+
+import {
+  PluginManager,
+  MedDevKitContextImpl,
+  CONTEXT_VERSION,
+} from './plugins';
 
 // ============================================================================
 // Default Configuration
@@ -64,6 +71,9 @@ const DEFAULT_CONFIG: Required<MedicalChunkerConfig> = {
   preserveSentences: true,
   detectNegations: false,
   customPreservePatterns: [],
+  plugins: [],
+  includePluginPatterns: true,
+  strictPluginCompatibility: false,
 };
 
 // ============================================================================
@@ -81,6 +91,8 @@ const DEFAULT_CONFIG: Required<MedicalChunkerConfig> = {
  */
 export class MedicalChunker {
   private config: Required<MedicalChunkerConfig>;
+  private pluginManager: PluginManager | null = null;
+  private pluginsInitialized: boolean = false;
 
   /**
    * Create a new MedicalChunker instance
@@ -90,6 +102,14 @@ export class MedicalChunker {
   constructor(config: MedicalChunkerConfig = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.validateConfig();
+
+    // Initialize plugin manager if plugins are provided
+    if (this.config.plugins && this.config.plugins.length > 0) {
+      this.pluginManager = new PluginManager(this.config.strictPluginCompatibility);
+      for (const plugin of this.config.plugins) {
+        this.pluginManager.register(plugin);
+      }
+    }
   }
 
   /**
@@ -137,18 +157,72 @@ export class MedicalChunker {
       ? detectNegations(normalizedText)
       : [];
 
-    // Build protected ranges (regions that should not be split)
-    const protectedRanges = this.buildProtectedRanges(
+    // Build base protected ranges (regions that should not be split)
+    let protectedRanges = this.buildProtectedRanges(
       normalizedText,
       vitals,
       this.config.customPreservePatterns
     );
 
+    // Plugin integration
+    let pluginPatterns: Map<string, PatternMatch[]> = new Map();
+    let ctx: MedDevKitContextImpl | null = null;
+
+    if (this.pluginManager) {
+      // Create context for plugins
+      ctx = new MedDevKitContextImpl(text, protectedRanges);
+
+      // Initialize plugins (first time only)
+      if (!this.pluginsInitialized) {
+        // Note: This is sync for now; async initialization would need refactoring
+        // For async plugins, users should call initializePlugins() before chunking
+        this.pluginsInitialized = true;
+      }
+
+      // Call onDocumentStart
+      this.pluginManager.onDocumentStart({ text }, ctx);
+
+      // Collect patterns from plugins
+      pluginPatterns = this.pluginManager.collectPatterns(normalizedText, ctx);
+
+      // Collect protected ranges from plugins
+      const pluginProtectedRanges = this.pluginManager.collectProtectedRanges(
+        normalizedText,
+        ctx
+      );
+
+      // Also get ranges added via ctx.addProtectedRange()
+      const contextRanges = ctx.getAdditionalRanges();
+
+      // Merge all protected ranges
+      protectedRanges = this.mergeProtectedRanges([
+        ...protectedRanges,
+        ...pluginProtectedRanges,
+        ...contextRanges,
+        ...this.getProtectedRangesFromPatterns(pluginPatterns),
+      ]);
+
+      // Update context with merged ranges
+      ctx.setExistingRanges(protectedRanges);
+
+      // Allow plugins to modify patterns
+      const allPatterns = PluginManager.flattenPatterns(pluginPatterns);
+      const modifiedPatterns = this.pluginManager.onPatternsCollected(
+        allPatterns,
+        ctx
+      );
+
+      // Rebuild pattern map if patterns were modified
+      if (modifiedPatterns !== allPatterns) {
+        pluginPatterns = this.rebuildPatternMap(modifiedPatterns);
+      }
+    }
+
     // Get section boundaries for preferred split points
     const sectionBoundaries = getSectionBoundaries(normalizedText);
 
     // Perform chunking
-    const chunks = this.performChunking(
+    let chunks = this.performChunking(
       normalizedText,
       sections,
       sectionBoundaries,
@@ -158,6 +232,20 @@ export class MedicalChunker {
       negations
     );
 
+    // Plugin: onChunkCreated and attach patterns
+    if (this.pluginManager && ctx) {
+      chunks = chunks.map((chunk) => {
+        // Attach plugin patterns to this chunk
+        const chunkWithPatterns = this.attachPluginPatterns(
+          chunk,
+          pluginPatterns
+        );
+
+        // Call onChunkCreated hook
+        return this.pluginManager!.onChunkCreated(chunkWithPatterns, ctx!);
+      });
+    }
+
     // Add overlap if configured
     const chunksWithOverlap =
       this.config.overlapTokens > 0
@@ -166,7 +254,8 @@ export class MedicalChunker {
 
     const processingTimeMs = performance.now() - startTime;
 
-    return {
+    // Build result
+    const result: ChunkingResult = {
       chunks: chunksWithOverlap,
       metadata: {
         originalLength: text.length,
@@ -177,8 +266,26 @@ export class MedicalChunker {
         containsPhi: phiMarkers.length > 0,
         sectionsDetected: [...new Set(sections.map((s) => s.type))],
         vitalsDetected: vitals.length,
+        // Plugin metadata
+        contextVersion: this.pluginManager ? CONTEXT_VERSION : undefined,
+        pluginsApplied: this.pluginManager
+          ? this.pluginManager.getPluginIds()
+          : undefined,
+        pluginWarnings: this.pluginManager
+          ? this.pluginManager.getWarningsForOutput()
+          : undefined,
+        pluginPatternsDetected: this.pluginManager
+          ? PluginManager.countPatterns(pluginPatterns)
+          : undefined,
       },
     };
+
+    // Plugin: onDocumentEnd
+    if (this.pluginManager && ctx) {
+      this.pluginManager.onDocumentEnd(result, ctx);
+    }
+
+    return result;
   }
 
   /**
@@ -523,6 +630,118 @@ export class MedicalChunker {
         vitalsDetected: 0,
       },
     };
+  }
+
+  // ==========================================================================
+  // Plugin Helper Methods
+  // ==========================================================================
+
+  /**
+   * Extract protected ranges from plugin pattern matches
+   */
+  private getProtectedRangesFromPatterns(
+    patterns: Map<string, PatternMatch[]>
+  ): ProtectedRange[] {
+    const ranges: ProtectedRange[] = [];
+
+    for (const matches of patterns.values()) {
+      for (const match of matches) {
+        if (match.isProtected) {
+          ranges.push({
+            start: match.startOffset,
+            end: match.endOffset,
+            reason: 'plugin',
+          });
+        }
+      }
+    }
+
+    return ranges;
+  }
+
+  /**
+   * Rebuild pattern map from flat array (after modification)
+   */
+  private rebuildPatternMap(
+    patterns: PatternMatch[]
+  ): Map<string, PatternMatch[]> {
+    const map = new Map<string, PatternMatch[]>();
+
+    for (const pattern of patterns) {
+      const existing = map.get(pattern.pluginId) || [];
+      existing.push(pattern);
+      map.set(pattern.pluginId, existing);
+    }
+
+    return map;
+  }
+
+  /**
+   * Attach plugin patterns to a chunk's metadata
+   */
+  private attachPluginPatterns(
+    chunk: MedicalChunk,
+    allPatterns: Map<string, PatternMatch[]>
+  ): MedicalChunk {
+    if (!this.config.includePluginPatterns) {
+      return chunk;
+    }
+
+    const chunkStart = chunk.boundaries.start;
+    const chunkEnd = chunk.boundaries.end;
+
+    const chunkPatterns: Record<string, PatternMatch[]> = {};
+    const allMatches: PatternMatch[] = [];
+
+    for (const [pluginId, patterns] of allPatterns) {
+      // Filter patterns that fall within this chunk
+      const inChunk = patterns.filter(
+        (p) => p.startOffset >= chunkStart && p.endOffset <= chunkEnd
+      );
+
+      if (inChunk.length > 0) {
+        // Adjust offsets to be relative to chunk
+        const adjusted = inChunk.map((p) => ({
+          ...p,
+          startOffset: p.startOffset - chunkStart,
+          endOffset: p.endOffset - chunkStart,
+        }));
+
+        chunkPatterns[pluginId] = adjusted;
+        allMatches.push(...adjusted);
+      }
+    }
+
+    // Only add if there are patterns
+    if (allMatches.length === 0) {
+      return chunk;
+    }
+
+    return {
+      ...chunk,
+      metadata: {
+        ...chunk.metadata,
+        pluginPatterns: chunkPatterns,
+        allPatternMatches: allMatches.sort(
+          (a, b) => a.startOffset - b.startOffset
+        ),
+      },
+    };
+  }
+
+  /**
+   * Initialize plugins asynchronously
+   * Call this before chunking if plugins have async onRegister hooks
+   */
+  public async initializePlugins(): Promise<void> {
+    if (!this.pluginManager || this.pluginsInitialized) {
+      return;
+    }
+
+    // Create a temporary context for initialization
+    const ctx = new MedDevKitContextImpl('', []);
+    await this.pluginManager.initializeAll(ctx);
+    this.pluginsInitialized = true;
   }
 }
 

@@ -49,6 +49,13 @@ export type {
   ProtectedRange,
   SplitPoint,
   SplitReason,
+  // Plugin system types
+  MedDevKitContext,
+  ContextFeatures,
+  PatternPlugin,
+  PatternMatch,
+  ChunkAnnotations,
+  PluginRegistration,
 } from './types';
 
 // Pattern detection utilities (for advanced usage)
@@ -93,3 +100,27 @@ export {
   countWords,
   truncate,
 } from './utils';
+
+// Plugin system
+export {
+  // Version utilities
+  CONTEXT_VERSION,
+  BRAND_VERSION,
+  isVersionCompatible,
+  compareVersions,
+  getCurrentFeatures,
+  // Context implementation
+  MedDevKitContextImpl,
+  createContext,
+  // Plugin manager
+  PluginManager,
+  // Error types
+  PluginError,
+  PluginCompatibilityError,
+  PluginInitializationError,
+  PluginAlreadyRegisteredError,
+  PluginNotFoundError,
+  createPluginWarning,
+} from './plugins';
+
+export type { PluginWarning } from './plugins';

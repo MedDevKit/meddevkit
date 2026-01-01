@@ -70,6 +70,24 @@ export interface MedicalChunkerConfig {
    * Custom patterns to preserve (will not be split)
    */
   customPreservePatterns?: RegExp[];
+
+  /**
+   * Plugins to use for pattern detection and annotation
+   * Plugins are applied in order
+   */
+  plugins?: PatternPlugin[];
+
+  /**
+   * Whether to include full pattern match details in output
+   * @default true
+   */
+  includePluginPatterns?: boolean;
+
+  /**
+   * Strict mode: fail if plugin requires newer context version
+   * @default false (graceful degradation)
+   */
+  strictPluginCompatibility?: boolean;
 }
 
 // ============================================================================
@@ -218,6 +236,16 @@ export interface ChunkMetadata {
    * Negated findings in this chunk
    */
   negations?: NegationContext[];
+
+  /**
+   * Pattern matches from plugins, keyed by plugin ID
+   */
+  pluginPatterns?: Record<string, PatternMatch[]>;
+
+  /**
+   * Flattened list of all plugin pattern matches, sorted by position
+   */
+  allPatternMatches?: PatternMatch[];
 }
 
 // ============================================================================
@@ -435,6 +463,26 @@ export interface ProcessingMetadata {
    * Total vital signs detected
    */
   vitalsDetected: number;
+
+  /**
+   * MedDevKit Context version used for processing
+   */
+  contextVersion?: string;
+
+  /**
+   * Plugins that were applied during processing
+   */
+  pluginsApplied?: string[];
+
+  /**
+   * Warnings from plugins during processing
+   */
+  pluginWarnings?: Array<{ pluginId: string; message: string }>;
+
+  /**
+   * Total pattern matches detected by plugins
+   */
+  pluginPatternsDetected?: number;
 }
 
 // ============================================================================
@@ -458,7 +506,7 @@ export interface ProtectedRange {
   /**
    * Reason this range is protected
    */
-  reason: 'vital' | 'custom' | 'sentence';
+  reason: 'vital' | 'custom' | 'sentence' | 'plugin';
 }
 
 /**
@@ -474,4 +522,294 @@ export interface SplitPoint {
    * Reason for choosing this split point
    */
   reason: SplitReason;
+}
+
+// ============================================================================
+// Plugin System Types
+// ============================================================================
+
+/**
+ * Features available in MedDevKitContext
+ * New features are added in each version
+ */
+export interface ContextFeatures {
+  /** Basic token estimation */
+  tokenEstimation: boolean;
+  /** Pattern matching helpers */
+  patternMatching: boolean;
+  /** Protected range management */
+  protectedRanges: boolean;
+  /** Full text access */
+  textAccess: boolean;
+  /** Access to detected clinical sections (v1.1.0+) */
+  sectionContext: boolean;
+  /** Access to adjacent chunks (v1.2.0+) */
+  neighborChunks: boolean;
+  /** Async pattern detection support (v2.0.0+) */
+  asyncPatternDetection: boolean;
+  /** Inter-plugin communication (v2.0.0+) */
+  pluginCommunication: boolean;
+  /** Advanced tokenization options (v2.0.0+) */
+  advancedTokenization: boolean;
+}
+
+/**
+ * MedDevKit Context - passed to all plugin methods
+ *
+ * Provides utilities for pattern detection, token estimation,
+ * and document access. Features expand with each version.
+ */
+export interface MedDevKitContext {
+  // ========== Versioning ==========
+
+  /**
+   * Marketing brand version (e.g., "MedDevKit Context 1.0")
+   */
+  readonly brandVersion: string;
+
+  /**
+   * Semantic version for compatibility checking (e.g., "1.0.0")
+   */
+  readonly contextVersion: string;
+
+  /**
+   * Features available in this context version
+   */
+  readonly features: ContextFeatures;
+
+  // ========== Document Access ==========
+
+  /**
+   * Original text being processed
+   */
+  readonly text: string;
+
+  /**
+   * Normalized text (whitespace cleaned, etc.)
+   */
+  readonly normalizedText: string;
+
+  // ========== Token Utilities ==========
+
+  /**
+   * Estimate token count for a string
+   */
+  estimateTokens(text: string): number;
+
+  /**
+   * Estimate character count for a target token count
+   */
+  estimateCharsForTokens(tokens: number): number;
+
+  // ========== Pattern Matching Helpers ==========
+
+  /**
+   * Execute a regex pattern and return all matches with positions
+   */
+  matchPattern(pattern: RegExp): Array<{
+    match: RegExpExecArray;
+    start: number;
+    end: number;
+  }>;
+
+  // ========== Protected Ranges ==========
+
+  /**
+   * Get all currently protected ranges
+   */
+  getProtectedRanges(): readonly ProtectedRange[];
+
+  /**
+   * Request a range to be protected from splitting
+   */
+  addProtectedRange(start: number, end: number, reason?: string): void;
+
+  // ========== Feature Detection ==========
+
+  /**
+   * Check if a feature is available in this context version
+   */
+  hasFeature(feature: keyof ContextFeatures): boolean;
+}
+
+/**
+ * A pattern match detected by a plugin
+ */
+export interface PatternMatch {
+  /**
+   * Pattern identifier (e.g., "ejection-fraction")
+   */
+  patternId: string;
+
+  /**
+   * Human-readable pattern name
+   */
+  patternName: string;
+
+  /**
+   * Plugin that produced this match
+   */
+  pluginId: string;
+
+  /**
+   * Start position in text
+   */
+  startOffset: number;
+
+  /**
+   * End position in text
+   */
+  endOffset: number;
+
+  /**
+   * Raw matched text
+   */
+  raw: string;
+
+  /**
+   * Detection confidence (0-1)
+   */
+  confidence: number;
+
+  /**
+   * Whether this range should be protected from splitting
+   */
+  isProtected: boolean;
+
+  /**
+   * Optional parsed/structured data
+   */
+  data?: Record<string, unknown>;
+
+  /**
+   * Optional category for grouping (e.g., "medication", "lab_value")
+   */
+  category?: string;
+}
+
+/**
+ * Annotations returned by plugin's annotateChunk method
+ */
+export interface ChunkAnnotations {
+  /**
+   * Additional metadata to merge into chunk
+   */
+  metadata?: Record<string, unknown>;
+
+  /**
+   * Tags to add to the chunk
+   */
+  tags?: string[];
+}
+
+/**
+ * Plugin interface for extending MedicalChunker
+ *
+ * Plugins can detect patterns, define protected ranges,
+ * and annotate chunks with additional metadata.
+ */
+export interface PatternPlugin {
+  // ========== Identity ==========
+
+  /**
+   * Unique plugin identifier (e.g., "@meddevkit/plugin-cardiology")
+   */
+  readonly id: string;
+
+  /**
+   * Human-readable plugin name
+   */
+  readonly name: string;
+
+  /**
+   * Plugin version (semver)
+   */
+  readonly version: string;
+
+  /**
+   * Minimum MedDevKit Context version required
+   */
+  readonly minContextVersion: string;
+
+  /**
+   * Optional description
+   */
+  readonly description?: string;
+
+  // ========== Capability Methods (all optional) ==========
+
+  /**
+   * Detect patterns in the text
+   */
+  detectPatterns?(text: string, ctx: MedDevKitContext): PatternMatch[];
+
+  /**
+   * Define ranges that should be protected from splitting
+   */
+  getProtectedRanges?(text: string, ctx: MedDevKitContext): ProtectedRange[];
+
+  /**
+   * Annotate a chunk with additional metadata
+   */
+  annotateChunk?(chunk: MedicalChunk, ctx: MedDevKitContext): ChunkAnnotations;
+
+  // ========== Lifecycle Hooks ==========
+
+  /**
+   * Called once when plugin is registered
+   */
+  onRegister?(ctx: MedDevKitContext): void | Promise<void>;
+
+  /**
+   * Called at the start of document processing
+   */
+  onDocumentStart?(document: { text: string }, ctx: MedDevKitContext): void;
+
+  /**
+   * Called after all patterns are collected, can modify patterns
+   */
+  onPatternsCollected?(
+    patterns: PatternMatch[],
+    ctx: MedDevKitContext
+  ): PatternMatch[];
+
+  /**
+   * Called after each chunk is created, can modify chunk
+   */
+  onChunkCreated?(chunk: MedicalChunk, ctx: MedDevKitContext): MedicalChunk;
+
+  /**
+   * Called after all chunks are created
+   */
+  onDocumentEnd?(result: ChunkingResult, ctx: MedDevKitContext): void;
+
+  /**
+   * Called when plugin is unloaded (cleanup)
+   */
+  onUnload?(): void;
+}
+
+/**
+ * Result of registering a plugin
+ */
+export interface PluginRegistration {
+  /**
+   * Plugin ID
+   */
+  id: string;
+
+  /**
+   * Whether plugin was successfully registered
+   */
+  success: boolean;
+
+  /**
+   * Warning if plugin uses newer features than available
+   */
+  compatibilityWarning?: string;
+
+  /**
+   * Features unavailable due to version mismatch
+   */
+  unavailableFeatures?: (keyof ContextFeatures)[];
 }
