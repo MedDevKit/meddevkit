@@ -173,7 +173,7 @@ interface MedicalChunkerConfig {
 
   // Plugin System
   plugins?: PatternPlugin[];     // Custom pattern plugins
-  includePluginPatterns?: boolean;  // Attach patterns to chunks (Default: false)
+  includePluginPatterns?: boolean;  // Attach patterns to chunks (Default: true)
   strictPluginCompatibility?: boolean;  // Throw on version mismatch (Default: false)
 }
 ```
@@ -285,7 +285,7 @@ pnpm dev
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](.github/CONTRIBUTING.md) for guidelines.
+We welcome contributions! Please open an issue or pull request on GitHub.
 
 ## License
 
