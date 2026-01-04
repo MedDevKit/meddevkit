@@ -85,12 +85,19 @@ const BASIC_PHI_PATTERNS: Record<Exclude<PhiType, 'unknown'>, RegExp[]> = {
   /**
    * Name patterns - Very difficult to detect accurately
    * Basic patterns for labeled names only
+   * Includes conversational patterns for voice transcription
    */
   name: [
     // Dr. followed by capitalized name
     /\bDr\.?\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/g,
     // Patient name with label
     /\b(?:Patient(?:\s+Name)?|Name)[:\s]+([A-Z][a-z]+(?:\s+[A-Z]\.?)?(?:\s+[A-Z][a-z]+))\b/g,
+    // Conversational: "patient's name is Fred Winkle" or "patient name is John Smith"
+    /\bpatient(?:'s)?\s+name\s+is\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/gi,
+    // Conversational: "the name is Fred Winkle" or "name is John"
+    /\b(?:the\s+)?name\s+is\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/gi,
+    // Mr./Mrs./Ms./Miss followed by name
+    /\b(?:Mr|Mrs|Ms|Miss)\.?\s+([A-Z][a-z]+)\b/g,
     // Attention or contact name
     /\b(?:Attn|Contact)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/gi,
   ],

@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   detectVitals,
   isWithinVitalPattern,
-  VITAL_PATTERNS,
 } from '../../src/patterns/vitals';
 import { VITALS_VARIATIONS } from '../fixtures/sample-notes';
 
@@ -40,6 +39,16 @@ describe('Vital Signs Detection', () => {
       const text = 'Patient BP: 120/80 mmHg stable';
       expect(isWithinVitalPattern(text, 15)).toBe(true); // Inside BP
     });
+
+    it('should detect blood pressure with "over" format', () => {
+      const text = 'blood pressure 120 over 80';
+      const vitals = detectVitals(text);
+
+      expect(vitals).toHaveLength(1);
+      expect(vitals[0].type).toBe('blood_pressure');
+      expect(vitals[0].value).toBe(120);
+      expect(vitals[0].value2).toBe(80);
+    });
   });
 
   describe('Heart Rate', () => {
@@ -66,6 +75,15 @@ describe('Vital Signs Detection', () => {
 
       expect(vitals).toHaveLength(1);
       expect(vitals[0].type).toBe('heart_rate');
+    });
+
+    it('should detect heart rate with "of" preposition', () => {
+      const text = 'heart rate of 72';
+      const vitals = detectVitals(text);
+
+      expect(vitals).toHaveLength(1);
+      expect(vitals[0].type).toBe('heart_rate');
+      expect(vitals[0].value).toBe(72);
     });
   });
 
@@ -94,6 +112,15 @@ describe('Vital Signs Detection', () => {
       expect(vitals).toHaveLength(1);
       expect(vitals[0].type).toBe('temperature');
     });
+
+    it('should detect temperature with "of" preposition', () => {
+      const text = 'temperature of 98.6';
+      const vitals = detectVitals(text);
+
+      expect(vitals).toHaveLength(1);
+      expect(vitals[0].type).toBe('temperature');
+      expect(vitals[0].value).toBe(98.6);
+    });
   });
 
   describe('Oxygen Saturation', () => {
@@ -113,6 +140,15 @@ describe('Vital Signs Detection', () => {
       expect(vitals).toHaveLength(1);
       expect(vitals[0].type).toBe('oxygen_saturation');
     });
+
+    it('should detect O2 sat with "percent" spelled out', () => {
+      const text = 'O2 sat 98 percent';
+      const vitals = detectVitals(text);
+
+      expect(vitals).toHaveLength(1);
+      expect(vitals[0].type).toBe('oxygen_saturation');
+      expect(vitals[0].value).toBe(98);
+    });
   });
 
   describe('Respiratory Rate', () => {
@@ -131,6 +167,15 @@ describe('Vital Signs Detection', () => {
 
       expect(vitals).toHaveLength(1);
       expect(vitals[0].type).toBe('respiratory_rate');
+    });
+
+    it('should detect "respirations" as respiratory rate', () => {
+      const text = 'respirations 16';
+      const vitals = detectVitals(text);
+
+      expect(vitals).toHaveLength(1);
+      expect(vitals[0].type).toBe('respiratory_rate');
+      expect(vitals[0].value).toBe(16);
     });
   });
 
@@ -173,6 +218,15 @@ describe('Vital Signs Detection', () => {
       expect(vitals).toHaveLength(1);
       expect(vitals[0].type).toBe('weight');
     });
+
+    it('should detect "weighs" as weight', () => {
+      const text = 'Patient weighs 180 lbs';
+      const vitals = detectVitals(text);
+
+      expect(vitals).toHaveLength(1);
+      expect(vitals[0].type).toBe('weight');
+      expect(vitals[0].value).toBe(180);
+    });
   });
 
   describe('Pain Scale', () => {
@@ -183,6 +237,84 @@ describe('Vital Signs Detection', () => {
       expect(vitals).toHaveLength(1);
       expect(vitals[0].type).toBe('pain_scale');
       expect(vitals[0].value).toBe(7);
+    });
+  });
+
+  describe('Conversational Speech Patterns', () => {
+    it('should detect blood pressure with "is" in conversational speech', () => {
+      const text = 'blood pressure is 100 over 65';
+      const vitals = detectVitals(text);
+
+      expect(vitals).toHaveLength(1);
+      expect(vitals[0].type).toBe('blood_pressure');
+      expect(vitals[0].value).toBe(100);
+      expect(vitals[0].value2).toBe(65);
+    });
+
+    it('should detect BP with "was" in conversational speech', () => {
+      const text = 'BP was 120/80';
+      const vitals = detectVitals(text);
+
+      expect(vitals).toHaveLength(1);
+      expect(vitals[0].type).toBe('blood_pressure');
+      expect(vitals[0].value).toBe(120);
+      expect(vitals[0].value2).toBe(80);
+    });
+
+    it('should detect heart rate with "is" in conversational speech', () => {
+      const text = 'heart rate is 88';
+      const vitals = detectVitals(text);
+
+      expect(vitals).toHaveLength(1);
+      expect(vitals[0].type).toBe('heart_rate');
+      expect(vitals[0].value).toBe(88);
+    });
+
+    it('should detect pulse with "is" in conversational speech', () => {
+      const text = 'pulse is 72';
+      const vitals = detectVitals(text);
+
+      expect(vitals).toHaveLength(1);
+      expect(vitals[0].type).toBe('heart_rate');
+      expect(vitals[0].value).toBe(72);
+    });
+
+    it('should detect temperature with "is" in conversational speech', () => {
+      const text = 'temperature is 98.6';
+      const vitals = detectVitals(text);
+
+      expect(vitals).toHaveLength(1);
+      expect(vitals[0].type).toBe('temperature');
+      expect(vitals[0].value).toBe(98.6);
+    });
+
+    it('should detect respiratory rate with "is" in conversational speech', () => {
+      const text = 'respiratory rate is 18';
+      const vitals = detectVitals(text);
+
+      expect(vitals).toHaveLength(1);
+      expect(vitals[0].type).toBe('respiratory_rate');
+      expect(vitals[0].value).toBe(18);
+    });
+
+    it('should detect oxygen with "is" in conversational speech', () => {
+      const text = 'oxygen is 97';
+      const vitals = detectVitals(text);
+
+      expect(vitals).toHaveLength(1);
+      expect(vitals[0].type).toBe('oxygen_saturation');
+      expect(vitals[0].value).toBe(97);
+    });
+
+    it('should detect BP in full conversational sentence', () => {
+      const text =
+        "I'm not sure what's going on right now but just looking at the patient I can see that their blood pressure is 100 over 65";
+      const vitals = detectVitals(text);
+
+      expect(vitals).toHaveLength(1);
+      expect(vitals[0].type).toBe('blood_pressure');
+      expect(vitals[0].value).toBe(100);
+      expect(vitals[0].value2).toBe(65);
     });
   });
 });

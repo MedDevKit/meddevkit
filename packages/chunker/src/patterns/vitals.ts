@@ -19,6 +19,7 @@ import type { VitalSign, VitalType } from '../types';
 /**
  * Regular expressions for detecting vital signs
  * Patterns use case-insensitive matching and capture key values
+ * Supports both structured clinical docs and conversational speech transcription
  */
 export const VITAL_PATTERNS: Record<VitalType, RegExp> = {
   /**
@@ -26,60 +27,72 @@ export const VITAL_PATTERNS: Record<VitalType, RegExp> = {
    * - "BP: 120/80"
    * - "BP 120/80 mmHg"
    * - "blood pressure 120 over 80"
+   * - "blood pressure is 120 over 80" (conversational)
    * - "B/P: 120/80"
    */
   blood_pressure:
-    /\b(?:BP|B\/P|blood\s+pressure)[:\s]*(\d{2,3})\s*[\/\\](?:over\s*)?(\d{2,3})(?:\s*(?:mmHg|mm\s*Hg))?\b/gi,
+    /\b(?:BP|B\/P|blood\s+pressure)(?:\s+(?:is|was|reads?|at|of|shows?|measures?))?[:\s]*(\d{2,3})\s*(?:[\/\\]|over\s+)(\d{2,3})(?:\s*(?:mmHg|mm\s*Hg))?\b/gi,
 
   /**
    * Heart Rate patterns:
    * - "HR: 72"
    * - "HR 72 bpm"
    * - "heart rate 72"
+   * - "heart rate of 72"
+   * - "heart rate is 72" (conversational)
    * - "pulse 72"
+   * - "pulse is 72" (conversational)
    */
   heart_rate:
-    /\b(?:HR|heart\s+rate|pulse)[:\s]*(\d{2,3})(?:\s*(?:bpm|beats?\s*(?:per\s*)?min(?:ute)?|\/min))?\b/gi,
+    /\b(?:HR|heart\s+rate|pulse)(?:\s+(?:is|was|of|at|reads?|shows?|measures?))?[:\s]*(\d{2,3})(?:\s*(?:bpm|beats?\s*(?:per\s*)?min(?:ute)?|\/min))?\b/gi,
 
   /**
    * Respiratory Rate patterns:
    * - "RR: 16"
    * - "RR 16/min"
    * - "respiratory rate 16"
+   * - "respiratory rate is 16" (conversational)
    * - "resp rate 16"
+   * - "respirations 16"
    */
   respiratory_rate:
-    /\b(?:RR|resp(?:iratory)?\s*rate)[:\s]*(\d{1,2})(?:\s*(?:\/min|per\s*min(?:ute)?|breaths?\s*(?:per\s*)?min))?\b/gi,
+    /\b(?:RR|resp(?:iratory)?\s*rate|respirations)(?:\s+(?:is|was|of|at|reads?|shows?|measures?))?[:\s]*(\d{1,2})(?:\s*(?:\/min|per\s*min(?:ute)?|breaths?\s*(?:per\s*)?min))?\b/gi,
 
   /**
    * Temperature patterns:
    * - "T: 98.6"
    * - "temp 98.6 F"
    * - "temperature 37.0 C"
+   * - "temperature of 98.6"
+   * - "temperature is 98.6" (conversational)
    * - "T 98.6°F"
    */
   temperature:
-    /\b(?:T(?:emp)?|temperature)[:\s]*(\d{2,3}(?:\.\d{1,2})?)(?:\s*(?:°\s*)?(?:F(?:ahrenheit)?|C(?:elsius)?)|(?:\s+degrees?\s*(?:Fahrenheit|Celsius)?))?\b/gi,
+    /\b(?:T(?:emp)?|temperature)(?:\s+(?:is|was|of|at|reads?|shows?|measures?))?[:\s]*(\d{2,3}(?:\.\d{1,2})?)(?:\s*(?:°\s*)?(?:F(?:ahrenheit)?|C(?:elsius)?)|(?:\s+degrees?\s*(?:Fahrenheit|Celsius)?))?\b/gi,
 
   /**
    * Oxygen Saturation patterns:
    * - "O2 sat 98%"
    * - "SpO2: 98"
    * - "oxygen saturation 98%"
+   * - "oxygen is 97" (conversational)
+   * - "sat 98 percent"
    * - "sat 98% on RA"
    * - "O2 sat 94% on 2L NC"
    */
   oxygen_saturation:
-    /\b(?:O2\s*sat(?:uration)?|SpO2|pulse\s*ox|oxygen\s+sat(?:uration)?)[:\s]*(\d{2,3})(?:\s*%)?(?:\s*(?:on\s+(?:RA|room\s+air|\d+\s*L(?:\s*NC)?)))?\b/gi,
+    /\b(?:O2\s*sat(?:uration)?|SpO2|pulse\s*ox|oxygen(?:\s+sat(?:uration)?)?)(?:\s+(?:is|was|of|at|reads?|shows?|measures?))?[:\s]*(\d{2,3})(?:\s*(?:%|percent))?(?:\s*(?:on\s+(?:RA|room\s+air|\d+\s*L(?:\s*NC)?)))?\b/gi,
 
   /**
    * Weight patterns:
    * - "Wt: 180 lbs"
    * - "weight 81.6 kg"
+   * - "weight is 180" (conversational)
    * - "Wt 180#"
+   * - "Patient weighs 180 lbs"
    */
   weight:
-    /\b(?:Wt|weight)[:\s]*(\d{2,3}(?:\.\d{1,2})?)(?:\s*(?:lbs?|#|kg|kilograms?|pounds?))?\b/gi,
+    /\b(?:Wt|weight|weighs)(?:\s+(?:is|was|of|at))?[:\s]*(\d{2,3}(?:\.\d{1,2})?)(?:\s*(?:lbs?|#|kg|kilograms?|pounds?))?\b/gi,
 
   /**
    * Height patterns:

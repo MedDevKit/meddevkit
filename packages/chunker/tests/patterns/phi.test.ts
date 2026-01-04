@@ -252,6 +252,38 @@ describe('PHI Detection', () => {
       const nameMarker = markers.find((m) => m.type === 'name');
       expect(nameMarker).toBeDefined();
     });
+
+    it('should detect conversational "patient\'s name is" pattern', () => {
+      const text = "the patient's name is Fred Winkle";
+      const markers = detectPhi(text);
+
+      const nameMarker = markers.find((m) => m.type === 'name');
+      expect(nameMarker).toBeDefined();
+    });
+
+    it('should detect conversational "name is" pattern', () => {
+      const text = 'the name is John Smith';
+      const markers = detectPhi(text);
+
+      const nameMarker = markers.find((m) => m.type === 'name');
+      expect(nameMarker).toBeDefined();
+    });
+
+    it('should detect Mr./Mrs./Ms. prefix', () => {
+      const text = 'Mr. Johnson presented today';
+      const markers = detectPhi(text);
+
+      const nameMarker = markers.find((m) => m.type === 'name');
+      expect(nameMarker).toBeDefined();
+    });
+
+    it('should detect Mrs. prefix', () => {
+      const text = 'Mrs. Williams is here for follow-up';
+      const markers = detectPhi(text);
+
+      const nameMarker = markers.find((m) => m.type === 'name');
+      expect(nameMarker).toBeDefined();
+    });
   });
 
   describe('Address Detection', () => {
