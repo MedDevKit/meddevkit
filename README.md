@@ -1,8 +1,6 @@
 # MedDevKit
 
-Open-source medical development toolkit for healthcare AI applications.
-
-**Built on MedDevKit Context 1.0** — An extensible plugin architecture for medical text processing.
+MedDevKit is an open-source medical NLP toolkit that provides PHI-aware text chunking for RAG applications, real-time detection of vital signs, clinical sections, negations, and protected health information (PHI) in clinical documentation. Designed for healthcare AI applications with ~50ms latency and no network calls, it enables safe processing of medical text while preserving clinical context boundaries.
 
 ## Why MedDevKit?
 
