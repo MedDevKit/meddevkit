@@ -12,7 +12,8 @@
     "clean": "pnpm -r clean",
     "changeset": "changeset",
     "version": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish",
+    "demo": "pnpm --filter @meddevkit/demo dev"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.0",
