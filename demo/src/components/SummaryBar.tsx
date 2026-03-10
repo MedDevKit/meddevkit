@@ -36,9 +36,9 @@ export default function SummaryBar({
     const uniqueBroken = new Set(brokenPatterns.map((bp) => bp.originalText)).size;
 
     const stats = [
-      { label: 'Generic', value: naiveResult.totalChunks, icon: '□', color: 'text-red-600' },
+      { label: 'Generic', value: naiveResult.totalChunks, icon: '□', color: 'text-orange-600' },
       { label: 'MedDevKit', value: metadata.totalChunks, icon: '□', color: 'text-emerald-600' },
-      { label: 'Broken Patterns', value: uniqueBroken, icon: '⚠', color: 'text-red-600' },
+      { label: 'Broken Patterns', value: uniqueBroken, icon: '⚠', color: 'text-orange-600' },
       { label: 'Vitals Preserved', value: vitalsPreserved, icon: '💙', color: 'text-emerald-600' },
     ];
 

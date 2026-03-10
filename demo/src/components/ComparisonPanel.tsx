@@ -76,17 +76,17 @@ export default function ComparisonPanel({
       <div className="px-4 py-2.5 border-b border-slate-200 bg-slate-50">
         <div className="flex items-center justify-center gap-6 text-xs">
           <span className="text-slate-500">
-            <span className="font-semibold text-red-600">{naiveResult.totalChunks}</span>
+            <span className="font-semibold text-orange-600">{naiveResult.totalChunks}</span>
             {' vs '}
             <span className="font-semibold text-emerald-600">{result.metadata.totalChunks}</span>
             {' chunks'}
             {chunkDiff > 0 && (
-              <span className="text-red-500 ml-1">(+{chunkDiff} generic)</span>
+              <span className="text-orange-500 ml-1">(+{chunkDiff} generic)</span>
             )}
           </span>
           <span className="text-slate-300">|</span>
           <span className="text-slate-500">
-            <span className="font-semibold text-red-600">{uniqueBroken}</span>
+            <span className="font-semibold text-orange-600">{uniqueBroken}</span>
             {' broken pattern'}{uniqueBroken !== 1 ? 's' : ''}
           </span>
           <span className="text-slate-300">|</span>
@@ -103,12 +103,12 @@ export default function ComparisonPanel({
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Generic Chunker */}
         <div className="flex-1 flex flex-col border-r border-slate-200">
-          <div className="px-4 py-2 border-b border-red-200 bg-red-50">
-            <h2 className="text-xs font-semibold text-red-700 uppercase tracking-wider">
+          <div className="px-4 py-2 border-b border-orange-200 bg-orange-50">
+            <h2 className="text-xs font-semibold text-orange-700 uppercase tracking-wider">
               Generic Chunker
             </h2>
           </div>
-          <div className="flex-1 overflow-auto p-3 space-y-3 panel-scroll bg-red-50/30">
+          <div className="flex-1 overflow-auto p-3 space-y-3 panel-scroll bg-orange-50/30">
             {naiveResult.chunks.map((chunk) => {
               const patterns = brokenByChunk.get(chunk.index) || [];
               const hasBroken = patterns.length > 0;
@@ -118,20 +118,20 @@ export default function ComparisonPanel({
                   key={chunk.index}
                   className={`rounded-lg border shadow-sm overflow-hidden ${
                     hasBroken
-                      ? 'border-red-300 bg-white'
-                      : 'border-red-200 bg-white'
+                      ? 'border-orange-300 bg-white'
+                      : 'border-orange-200 bg-white'
                   }`}
                 >
-                  <div className="flex items-center justify-between px-3 py-2 border-b border-red-100 bg-red-50">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-orange-100 bg-orange-50">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-red-400">#{chunk.index + 1}</span>
+                      <span className="text-xs font-semibold text-orange-400">#{chunk.index + 1}</span>
                       {hasBroken && (
-                        <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-600 text-white">
+                        <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-orange-600 text-white">
                           Context Broken
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] text-red-400 font-mono">
+                    <span className="text-[10px] text-orange-400 font-mono">
                       {chunk.tokenCount} tok
                     </span>
                   </div>
@@ -146,7 +146,7 @@ export default function ComparisonPanel({
                     startOffset={chunk.startOffset}
                     endOffset={chunk.endOffset}
                     totalLength={totalLength}
-                    color="red"
+                    color="orange"
                   />
                 </div>
               );
@@ -253,7 +253,7 @@ function renderWithBrokenHighlights(
     parts.push(
       <span
         key={`${pattern.chunkIndex}-${start}`}
-        className="bg-red-200 text-red-900 border-b-2 border-red-500 px-0.5 rounded-sm"
+        className="bg-orange-200 text-orange-900 border-b-2 border-orange-500 px-0.5 rounded-sm"
         title={`Split from: ${pattern.originalText}`}
       >
         {chunkText.slice(start, end)}
@@ -386,11 +386,11 @@ function PositionBar({
   startOffset: number;
   endOffset: number;
   totalLength: number;
-  color: 'red' | 'emerald';
+  color: 'orange' | 'emerald';
 }) {
   const left = (startOffset / totalLength) * 100;
   const width = ((endOffset - startOffset) / totalLength) * 100;
-  const bgColor = color === 'red' ? 'bg-red-400' : 'bg-emerald-400';
+  const bgColor = color === 'orange' ? 'bg-orange-400' : 'bg-emerald-400';
 
   return (
     <div className="h-1.5 bg-slate-100 relative" title={`chars ${startOffset}–${endOffset}`}>
