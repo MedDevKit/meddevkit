@@ -130,5 +130,6 @@ feat(chunker): Add respiratory rate pattern detection
 Published by `.github/workflows/release.yml` via npm trusted publishing (no token/OTP; never publish locally):
 
 1. Bump `version` in `packages/chunker/package.json` and add a `CHANGELOG.md` entry; merge to main via PR
+   - `packages/chunker/README.md` and `LICENSE` are copies of the root files (npm needs them in the package dir); CI fails if they differ
 2. Tag and push: `git tag chunker-v<version> && git push origin chunker-v<version>`
 3. The workflow checks the tag matches the version, runs lint/typecheck/test, builds, and publishes with provenance

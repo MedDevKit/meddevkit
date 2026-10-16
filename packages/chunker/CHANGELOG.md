@@ -1,5 +1,13 @@
 # @meddevkit/chunker
 
+## 0.2.1
+
+### Patch Changes
+
+- Show the README on npm (0.2.0 shipped the file, but the npm page had none).
+- npm "Homepage" now links to the live demo: https://meddevkit.github.io/meddevkit/
+- Published from GitHub Actions via npm trusted publishing, with provenance.
+
 ## 0.2.0
 
 ### Minor Changes
