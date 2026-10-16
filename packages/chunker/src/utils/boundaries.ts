@@ -186,6 +186,72 @@ export function findWordBoundary(text: string, position: number): number {
 }
 
 /**
+ * Find where a chunk's overlap prefix should start
+ *
+ * Picks a start position in [windowStart, limit) such that the overlap
+ * text begins cleanly:
+ * 1. Prefer the earliest sentence or line start in the window (the
+ *    position right after `.`, `!` or `?` plus whitespace, or after a
+ *    newline) that is not inside a blocked range.
+ * 2. Otherwise snap forward to the next word start (a non-whitespace
+ *    character preceded by whitespace). If that lies strictly inside a
+ *    blocked range, move to the range's end and snap again.
+ *
+ * @param text - Full (normalized) text
+ * @param windowStart - Earliest allowed overlap start
+ * @param limit - Start of the chunk's core range (exclusive bound)
+ * @param blockedRanges - Ranges the overlap must not start inside
+ *   (e.g. protected ranges and PHI spans)
+ * @returns Overlap start position, or `limit` when no clean start exists
+ */
+export function findOverlapStart(
+  text: string,
+  windowStart: number,
+  limit: number,
+  blockedRanges: Array<{ start: number; end: number }>
+): number {
+  const start = Math.max(0, windowStart);
+  if (start >= limit) return limit;
+
+  const isBlocked = (pos: number): { start: number; end: number } | undefined =>
+    blockedRanges.find((r) => pos > r.start && pos < r.end);
+
+  // 1. Earliest sentence/line start inside the window. Look back a little
+  // so a sentence end just before windowStart still counts.
+  const lookBack = Math.max(0, start - 16);
+  const sentenceEnds = text.slice(lookBack, limit).matchAll(/[.!?]\s+|\n\s*/g);
+  for (const match of sentenceEnds) {
+    const candidate = lookBack + match.index! + match[0].length;
+    if (candidate < start) continue;
+    if (candidate >= limit) break;
+    if (!isBlocked(candidate)) return candidate;
+  }
+
+  // 2. Next clean word start
+  let pos = start;
+  while (pos < limit) {
+    pos = nextWordStart(text, pos, limit);
+    if (pos >= limit) return limit;
+    const blocking = isBlocked(pos);
+    if (!blocking) return pos;
+    pos = blocking.end;
+  }
+  return limit;
+}
+
+/**
+ * First position >= `from` and < `limit` where a word starts
+ * (non-whitespace character at the start of text or after whitespace)
+ */
+function nextWordStart(text: string, from: number, limit: number): number {
+  for (let i = from; i < limit; i++) {
+    if (/\s/.test(text[i])) continue;
+    if (i === 0 || /\s/.test(text[i - 1])) return i;
+  }
+  return limit;
+}
+
+/**
  * Merge overlapping protected ranges
  *
  * @param ranges - Array of ranges

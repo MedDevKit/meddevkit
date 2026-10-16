@@ -80,6 +80,14 @@ const chunker = new MedicalChunker({
 });
 ```
 
+Each chunk after the first is prefixed with up to `overlapTokens` of the text
+that precedes it. The overlap is a contiguous slice of the normalized text that
+starts on a word boundary (a sentence or line start when one is available) and
+never inside a vital sign, medication, or PHI span. Overlap is added on top of
+`maxTokens`, so a chunk's `tokenCount` may exceed `maxTokens` by up to
+`overlapTokens`. PHI markers and all other detections in the overlap are
+reported on the chunk, and every offset is relative to `chunk.text`.
+
 ### Negation Detection
 
 Optionally detect negated medical findings:
@@ -270,7 +278,18 @@ interface MedicalChunk {
   boundaries: ChunkBoundary;
   metadata: ChunkMetadata;
 }
+
+interface ChunkBoundary {
+  start: number;          // Core (non-overlap) range start in the normalized text
+  end: number;            // Core range end (exclusive)
+  overlapStart?: number;  // Where chunk.text begins when overlap was prepended
+  splitReason: SplitReason;
+}
 ```
+
+Offsets in `phiMarkers` and `metadata` (vitals, negations, medications,
+temporal, severity, plugin patterns) are relative to `chunk.text`, so
+`chunk.text.slice(m.startOffset, m.endOffset)` returns the matched text.
 
 ## Production Ready?
 

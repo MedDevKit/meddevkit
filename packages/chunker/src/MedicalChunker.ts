@@ -34,6 +34,7 @@ import type {
   ProtectedRange,
   SplitReason,
   PatternMatch,
+  ChunkMetadata,
 } from './types';
 
 import {
@@ -52,6 +53,7 @@ import { estimateTokens, estimateCharsForTokens } from './tokenizer';
 import {
   normalizeText,
   findBestSplitPoint,
+  findOverlapStart,
 } from './utils';
 
 import {
@@ -84,6 +86,21 @@ const DEFAULT_CONFIG: Required<MedicalChunkerConfig> = {
   includePluginPatterns: true,
   strictPluginCompatibility: false,
 };
+
+/**
+ * Document-level detections, with offsets into the normalized text.
+ * Per-chunk lists are derived from these for each chunk's text range.
+ */
+interface DocumentDetections {
+  phiMarkers: PhiMarker[];
+  vitals: VitalSign[];
+  negations: NegationContext[];
+  medications: MedicationMention[];
+  temporal: TemporalExpression[];
+  severity: SeverityModifier[];
+  /** Plugin patterns to attach to chunks (empty when not attaching) */
+  pluginPatterns: Map<string, PatternMatch[]>;
+}
 
 // ============================================================================
 // MedicalChunker Class
@@ -244,48 +261,54 @@ export class MedicalChunker {
     // Get section boundaries for preferred split points
     const sectionBoundaries = getSectionBoundaries(normalizedText);
 
+    const detections: DocumentDetections = {
+      phiMarkers,
+      vitals,
+      negations,
+      medications,
+      temporal,
+      severity,
+      pluginPatterns:
+        this.pluginManager && this.config.includePluginPatterns
+          ? pluginPatterns
+          : new Map(),
+    };
+
     // Perform chunking
     let chunks = this.performChunking(
       normalizedText,
       sections,
       sectionBoundaries,
       protectedRanges,
-      phiMarkers,
-      vitals,
-      negations,
-      medications,
-      temporal,
-      severity
+      detections
     );
 
-    // Plugin: onChunkCreated and attach patterns
-    if (this.pluginManager && ctx) {
-      chunks = chunks.map((chunk) => {
-        // Attach plugin patterns to this chunk
-        const chunkWithPatterns = this.attachPluginPatterns(
-          chunk,
-          pluginPatterns
-        );
-
-        // Call onChunkCreated hook
-        return this.pluginManager!.onChunkCreated(chunkWithPatterns, ctx!);
-      });
+    // Add overlap if configured. This runs before onChunkCreated so plugins
+    // see the final chunk text with offsets aligned to it.
+    if (this.config.overlapTokens > 0) {
+      chunks = this.addOverlap(
+        chunks,
+        normalizedText,
+        protectedRanges,
+        detections
+      );
     }
 
-    // Add overlap if configured
-    const chunksWithOverlap =
-      this.config.overlapTokens > 0
-        ? this.addOverlap(chunks, normalizedText)
-        : chunks;
+    // Plugin: onChunkCreated
+    if (this.pluginManager && ctx) {
+      chunks = chunks.map((chunk) =>
+        this.pluginManager!.onChunkCreated(chunk, ctx!)
+      );
+    }
 
     const processingTimeMs = performance.now() - startTime;
 
     // Build result
     const result: ChunkingResult = {
-      chunks: chunksWithOverlap,
+      chunks,
       metadata: {
         originalLength: text.length,
-        totalChunks: chunksWithOverlap.length,
+        totalChunks: chunks.length,
         processingTimeMs,
         config: this.config,
         warnings,
@@ -437,12 +460,7 @@ export class MedicalChunker {
     sections: ClinicalSection[],
     sectionBoundaries: number[],
     protectedRanges: ProtectedRange[],
-    phiMarkers: PhiMarker[],
-    vitals: VitalSign[],
-    negations: NegationContext[],
-    medications: MedicationMention[],
-    temporal: TemporalExpression[],
-    severity: SeverityModifier[]
+    detections: DocumentDetections
   ): MedicalChunk[] {
     const chunks: MedicalChunk[] = [];
     const maxChars = estimateCharsForTokens(this.config.maxTokens);
@@ -462,94 +480,33 @@ export class MedicalChunker {
         protectedRanges
       );
 
-      // Extract chunk text
-      const chunkText = text.slice(position, end).trim();
+      // Chunk text starts at the first non-whitespace character
+      const textStart = this.skipWhitespace(text, position, end);
+      const content = this.buildChunkContent(text, textStart, end, detections);
 
-      if (chunkText.length > 0) {
+      if (content.text.length > 0) {
         // Check minimum tokens
-        const tokenCount = estimateTokens(chunkText);
-        if (tokenCount >= this.config.minTokens || end >= text.length) {
-          // Get PHI markers for this chunk (adjust positions to be relative to chunk)
-          const chunkPhiMarkers = this.getMarkersInRange(
-            phiMarkers,
-            position,
-            end
-          ).map((m) => ({
-            ...m,
-            startOffset: m.startOffset - position,
-            endOffset: m.endOffset - position,
-          }));
-
-          // Get vitals for this chunk
-          const chunkVitals = vitals
-            .filter((v) => v.startOffset >= position && v.endOffset <= end)
-            .map((v) => ({
-              ...v,
-              startOffset: v.startOffset - position,
-              endOffset: v.endOffset - position,
-            }));
-
-          // Get negations for this chunk
-          const chunkNegations = negations
-            .filter((n) => n.startOffset >= position && n.endOffset <= end)
-            .map((n) => ({
-              ...n,
-              startOffset: n.startOffset - position,
-              endOffset: n.endOffset - position,
-            }));
-
-          // Get medications for this chunk
-          const chunkMedications = medications
-            .filter((m) => m.startOffset >= position && m.endOffset <= end)
-            .map((m) => ({
-              ...m,
-              startOffset: m.startOffset - position,
-              endOffset: m.endOffset - position,
-            }));
-
-          // Get temporal expressions for this chunk
-          const chunkTemporal = temporal
-            .filter((t) => t.startOffset >= position && t.endOffset <= end)
-            .map((t) => ({
-              ...t,
-              startOffset: t.startOffset - position,
-              endOffset: t.endOffset - position,
-            }));
-
-          // Get severity modifiers for this chunk
-          const chunkSeverity = severity
-            .filter((s) => s.startOffset >= position && s.endOffset <= end)
-            .map((s) => ({
-              ...s,
-              startOffset: s.startOffset - position,
-              endOffset: s.endOffset - position,
-            }));
-
+        if (
+          content.metadata.tokenCount >= this.config.minTokens ||
+          end >= text.length
+        ) {
           // Determine section for this chunk
           const section = getSectionAtPosition(sections, position);
 
           chunks.push({
-            text: chunkText,
+            text: content.text,
             id: this.generateChunkId(chunkIndex),
             index: chunkIndex,
-            hasPhi: chunkPhiMarkers.length > 0,
-            phiMarkers: chunkPhiMarkers,
+            hasPhi: content.hasPhi,
+            phiMarkers: content.phiMarkers,
             boundaries: {
               start: position,
               end,
               splitReason: reason,
             },
             metadata: {
-              tokenCount,
-              charCount: chunkText.length,
-              wordCount: chunkText.split(/\s+/).filter(Boolean).length,
+              ...content.metadata,
               section,
-              vitals: chunkVitals.length > 0 ? chunkVitals : undefined,
-              negations: chunkNegations.length > 0 ? chunkNegations : undefined,
-              medications:
-                chunkMedications.length > 0 ? chunkMedications : undefined,
-              temporal: chunkTemporal.length > 0 ? chunkTemporal : undefined,
-              severity: chunkSeverity.length > 0 ? chunkSeverity : undefined,
             },
           });
 
@@ -561,6 +518,74 @@ export class MedicalChunker {
     }
 
     return chunks;
+  }
+
+  /**
+   * Build a chunk's text and all offset-bearing fields for the text range
+   * [textStart, end). Every returned offset is relative to the returned
+   * text, which is the normalized text in that range with trailing
+   * whitespace trimmed (textStart must not point at whitespace).
+   */
+  private buildChunkContent(
+    text: string,
+    textStart: number,
+    end: number,
+    detections: DocumentDetections
+  ): Pick<MedicalChunk, 'text' | 'hasPhi' | 'phiMarkers'> & {
+    metadata: Omit<ChunkMetadata, 'section'>;
+  } {
+    const chunkText = text.slice(textStart, end).trimEnd();
+    const inRange = <T extends { startOffset: number; endOffset: number }>(
+      spans: T[]
+    ): T[] => this.getSpansInRange(spans, textStart, end);
+    const orUndefined = <T>(list: T[]): T[] | undefined =>
+      list.length > 0 ? list : undefined;
+
+    const phiMarkers = inRange(detections.phiMarkers);
+
+    const metadata: Omit<ChunkMetadata, 'section'> = {
+      tokenCount: estimateTokens(chunkText),
+      charCount: chunkText.length,
+      wordCount: chunkText.split(/\s+/).filter(Boolean).length,
+      vitals: orUndefined(inRange(detections.vitals)),
+      negations: orUndefined(inRange(detections.negations)),
+      medications: orUndefined(inRange(detections.medications)),
+      temporal: orUndefined(inRange(detections.temporal)),
+      severity: orUndefined(inRange(detections.severity)),
+    };
+
+    // Plugin patterns (only present when at least one match is in range)
+    const pluginPatterns: Record<string, PatternMatch[]> = {};
+    const allMatches: PatternMatch[] = [];
+    for (const [pluginId, patterns] of detections.pluginPatterns) {
+      const inChunk = inRange(patterns);
+      if (inChunk.length > 0) {
+        pluginPatterns[pluginId] = inChunk;
+        allMatches.push(...inChunk);
+      }
+    }
+    if (allMatches.length > 0) {
+      metadata.pluginPatterns = pluginPatterns;
+      metadata.allPatternMatches = allMatches.sort(
+        (a, b) => a.startOffset - b.startOffset
+      );
+    }
+
+    return {
+      text: chunkText,
+      hasPhi: phiMarkers.length > 0,
+      phiMarkers,
+      metadata,
+    };
+  }
+
+  /**
+   * First non-whitespace position in [start, end), or end if none
+   */
+  private skipWhitespace(text: string, start: number, end: number): number {
+    let i = start;
+    while (i < end && /\s/.test(text[i])) i++;
+    return i;
   }
 
   /**
@@ -628,52 +653,91 @@ export class MedicalChunker {
   }
 
   /**
-   * Get markers that fall within a range
+   * Get offset-bearing spans fully inside a range, with offsets made
+   * relative to the range start
    */
-  private getMarkersInRange(
-    markers: PhiMarker[],
+  private getSpansInRange<T extends { startOffset: number; endOffset: number }>(
+    spans: T[],
     start: number,
     end: number
-  ): PhiMarker[] {
-    return markers.filter((m) => m.startOffset >= start && m.endOffset <= end);
+  ): T[] {
+    return spans
+      .filter((s) => s.startOffset >= start && s.endOffset <= end)
+      .map((s) => ({
+        ...s,
+        startOffset: s.startOffset - start,
+        endOffset: s.endOffset - start,
+      }));
   }
 
   /**
    * Add overlap between chunks
+   *
+   * Each chunk after the first gets a prefix of up to overlapTokens of the
+   * text immediately preceding its core range (bounded by the previous
+   * chunk's core start). The prefix starts at a clean position chosen by
+   * findOverlapStart (sentence/line start preferred, never mid-word, never
+   * inside a protected range or PHI span). chunk.text becomes the
+   * contiguous normalized text from that position to boundaries.end, and
+   * all offset-bearing fields are rebuilt relative to it, so detections in
+   * the overlap are reported too. boundaries.start/end stay the core range;
+   * boundaries.overlapStart records where chunk.text begins.
    */
   private addOverlap(
     chunks: MedicalChunk[],
-    fullText: string
+    fullText: string,
+    protectedRanges: ProtectedRange[],
+    detections: DocumentDetections
   ): MedicalChunk[] {
     if (chunks.length <= 1) return chunks;
 
     const overlapChars = estimateCharsForTokens(this.config.overlapTokens);
+    const blockedRanges = [
+      ...protectedRanges,
+      ...detections.phiMarkers.map((m) => ({
+        start: m.startOffset,
+        end: m.endOffset,
+      })),
+    ];
 
     return chunks.map((chunk, index) => {
       if (index === 0) return chunk;
 
-      // Get overlap from previous chunk
       const prevChunk = chunks[index - 1];
-      const overlapStart = Math.max(
+      const coreStart = chunk.boundaries.start;
+      const windowStart = Math.max(
         prevChunk.boundaries.start,
-        prevChunk.boundaries.end - overlapChars
+        coreStart - overlapChars
       );
-      const overlapText = fullText.slice(
-        overlapStart,
-        prevChunk.boundaries.end
+      const overlapStart = findOverlapStart(
+        fullText,
+        windowStart,
+        coreStart,
+        blockedRanges
       );
 
-      // Prepend overlap to current chunk
-      const newText = overlapText + ' ' + chunk.text;
+      // Snapping left no overlap: keep the chunk as is
+      if (overlapStart >= coreStart) return chunk;
+
+      const content = this.buildChunkContent(
+        fullText,
+        overlapStart,
+        chunk.boundaries.end,
+        detections
+      );
 
       return {
         ...chunk,
-        text: newText.trim(),
+        text: content.text,
+        hasPhi: content.hasPhi,
+        phiMarkers: content.phiMarkers,
+        boundaries: {
+          ...chunk.boundaries,
+          overlapStart,
+        },
         metadata: {
-          ...chunk.metadata,
-          tokenCount: estimateTokens(newText),
-          charCount: newText.length,
-          wordCount: newText.split(/\s+/).filter(Boolean).length,
+          ...content.metadata,
+          section: chunk.metadata.section,
         },
       };
     });
@@ -750,59 +814,6 @@ export class MedicalChunker {
     }
 
     return map;
-  }
-
-  /**
-   * Attach plugin patterns to a chunk's metadata
-   */
-  private attachPluginPatterns(
-    chunk: MedicalChunk,
-    allPatterns: Map<string, PatternMatch[]>
-  ): MedicalChunk {
-    if (!this.config.includePluginPatterns) {
-      return chunk;
-    }
-
-    const chunkStart = chunk.boundaries.start;
-    const chunkEnd = chunk.boundaries.end;
-
-    const chunkPatterns: Record<string, PatternMatch[]> = {};
-    const allMatches: PatternMatch[] = [];
-
-    for (const [pluginId, patterns] of allPatterns) {
-      // Filter patterns that fall within this chunk
-      const inChunk = patterns.filter(
-        (p) => p.startOffset >= chunkStart && p.endOffset <= chunkEnd
-      );
-
-      if (inChunk.length > 0) {
-        // Adjust offsets to be relative to chunk
-        const adjusted = inChunk.map((p) => ({
-          ...p,
-          startOffset: p.startOffset - chunkStart,
-          endOffset: p.endOffset - chunkStart,
-        }));
-
-        chunkPatterns[pluginId] = adjusted;
-        allMatches.push(...adjusted);
-      }
-    }
-
-    // Only add if there are patterns
-    if (allMatches.length === 0) {
-      return chunk;
-    }
-
-    return {
-      ...chunk,
-      metadata: {
-        ...chunk.metadata,
-        pluginPatterns: chunkPatterns,
-        allPatternMatches: allMatches.sort(
-          (a, b) => a.startOffset - b.startOffset
-        ),
-      },
-    };
   }
 
   /**

@@ -29,14 +29,9 @@ export default function SummaryBar({
   const { metadata } = result;
 
   if (compareMode && naiveResult && brokenPatterns) {
-    const vitalsPreserved = result.chunks.reduce(
-      (sum, c) => sum + (c.metadata.vitals?.length ?? 0),
-      0,
-    );
-    const medsPreserved = result.chunks.reduce(
-      (sum, c) => sum + (c.metadata.medications?.length ?? 0),
-      0,
-    );
+    // Document-level counts: per-chunk lists also include items in the overlap text
+    const vitalsPreserved = metadata.vitalsDetected;
+    const medsPreserved = metadata.medicationsDetected;
     const uniqueBroken = new Set(brokenPatterns.map((bp) => bp.originalText)).size;
 
     const stats = [
