@@ -1,5 +1,7 @@
 # MedDevKit
 
+**[Live demo →](https://meddevkit.github.io/meddevkit/)** Paste a clinical note and compare MedDevKit's chunks with a generic chunker side by side.
+
 MedDevKit is an open-source medical NLP toolkit that provides PHI-aware text chunking for RAG applications, real-time detection of vital signs, clinical sections, negations, and protected health information (PHI) in clinical documentation. Designed for healthcare AI applications with ~50ms latency and no network calls, it enables safe processing of medical text while preserving clinical context boundaries.
 
 ## Why MedDevKit?
