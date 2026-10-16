@@ -14,6 +14,9 @@ const DEFAULT_CONFIG: ChunkerConfig = {
   preserveVitals: true,
   phiDetection: true,
   detectNegations: true,
+  preserveMedications: true,
+  detectTemporal: true,
+  detectSeverity: true,
 };
 
 export default function App() {
