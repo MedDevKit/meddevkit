@@ -47,3 +47,7 @@ playwright-output/
 
 # Vercel (preview deployments only; production is GitHub Pages)
 .vercel/
+
+# Copied in from the repo root by the chunker prepack script
+packages/chunker/README.md
+packages/chunker/LICENSE
