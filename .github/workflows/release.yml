@@ -1,0 +1,64 @@
+name: Release @meddevkit/chunker
+
+# Publishes to npm via trusted publishing (OIDC): no npm token or OTP needed.
+# Trigger: push a tag chunker-v<version> matching packages/chunker/package.json,
+# or run manually from main.
+
+on:
+  push:
+    tags: ['chunker-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required for npm trusted publishing and provenance
+
+concurrency:
+  group: release-chunker
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/chunker-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      # Node 24 ships npm 11, which supports trusted publishing
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check version
+        id: version
+        working-directory: packages/chunker
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "chunker-v$VERSION" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $VERSION"
+            exit 1
+          fi
+          if npm view "@meddevkit/chunker@$VERSION" version >/dev/null 2>&1; then
+            echo "::notice::@meddevkit/chunker@$VERSION is already published; skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lint, typecheck, test
+        if: steps.version.outputs.skip != 'true'
+        run: pnpm lint && pnpm typecheck && pnpm test
+
+      - name: Build
+        if: steps.version.outputs.skip != 'true'
+        run: pnpm --filter @meddevkit/chunker build
+
+      - name: Publish
+        if: steps.version.outputs.skip != 'true'
+        working-directory: packages/chunker
+        run: npm publish --provenance --access public
