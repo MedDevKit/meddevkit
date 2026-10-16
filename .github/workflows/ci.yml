@@ -23,6 +23,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Package README and LICENSE match repo root
+        run: |
+          cmp README.md packages/chunker/README.md || { echo "::error::packages/chunker/README.md differs from README.md; copy it over"; exit 1; }
+          cmp LICENSE packages/chunker/LICENSE || { echo "::error::packages/chunker/LICENSE differs from LICENSE; copy it over"; exit 1; }
+
       - name: Lint
         run: pnpm lint
 

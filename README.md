@@ -309,7 +309,7 @@ Contact us about **MedDevKit Cloud** or consulting services.
 
 | Package | Description | Status |
 |---------|-------------|--------|
-| [@meddevkit/chunker](./packages/chunker) | PHI-aware medical text chunker with plugin system | Available |
+| [@meddevkit/chunker](https://github.com/MedDevKit/meddevkit/tree/main/packages/chunker) | PHI-aware medical text chunker with plugin system | Available |
 | @meddevkit/terminology | Medical term normalizer | Coming soon |
 | @meddevkit/retrieval | Cascading medical retrieval | Coming soon |
 
@@ -341,7 +341,7 @@ We welcome contributions! Please open an issue or pull request on GitHub.
 
 ## License
 
-MIT - See [LICENSE](LICENSE)
+MIT - See [LICENSE](https://github.com/MedDevKit/meddevkit/blob/main/LICENSE)
 
 ---
 

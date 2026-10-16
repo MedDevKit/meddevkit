@@ -1,6 +1,6 @@
 {
   "name": "@meddevkit/chunker",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "PHI-aware medical text chunker for RAG applications",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -24,9 +24,7 @@
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist",
-    "prepack": "cp ../../README.md ../../LICENSE .",
-    "postpack": "rm -f README.md LICENSE"
+    "clean": "rm -rf dist"
   },
   "keywords": [
     "medical",
@@ -46,7 +44,7 @@
     "url": "https://github.com/MedDevKit/meddevkit.git",
     "directory": "packages/chunker"
   },
-  "homepage": "https://github.com/meddevkit/meddevkit#readme",
+  "homepage": "https://meddevkit.github.io/meddevkit/",
   "bugs": {
     "url": "https://github.com/meddevkit/meddevkit/issues"
   },
