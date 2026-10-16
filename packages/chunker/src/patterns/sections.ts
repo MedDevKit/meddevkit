@@ -77,7 +77,7 @@ export const SECTION_PATTERNS: Record<ClinicalSectionType, RegExp[]> = {
 
   assessment: [
     /^(?:ASSESSMENT|IMPRESSION|DIAGNOSIS|DX)[:\s]*/gim,
-    /^(?:CLINICAL\s+IMPRESSION|ASSESSMENT\s*(?:AND|&)\s*PLAN|A\s*[\/&]\s*P)[:\s]*/gim,
+    /^(?:CLINICAL\s+IMPRESSION|ASSESSMENT\s*(?:AND|&)\s*PLAN|A\s*[/&]\s*P)[:\s]*/gim,
   ],
 
   plan: [

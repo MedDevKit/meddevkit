@@ -1,5 +1,5 @@
 /**
- * OpenMedRAG Chunker Types
+ * MedDevKit Chunker Types
  * Core interfaces for medical text chunking
  *
  * @packageDocumentation

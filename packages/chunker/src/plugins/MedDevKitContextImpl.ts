@@ -125,6 +125,7 @@ export class MedDevKitContextImpl implements MedDevKitContext {
   public addProtectedRange(
     start: number,
     end: number,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- required by MedDevKitContext interface; reserved for future use
     _reason?: string
   ): void {
     // Note: _reason parameter reserved for future use
