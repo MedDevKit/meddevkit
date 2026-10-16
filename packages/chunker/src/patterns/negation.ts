@@ -22,11 +22,11 @@ export const NEGATION_PATTERNS: Record<NegationType, RegExp[]> = {
    */
   absent: [
     // "no chest pain", "no evidence of infection"
-    /\bno\s+(?:evidence\s+of\s+|signs?\s+of\s+|symptoms?\s+of\s+)?([^.;,]{3,40})/gi,
+    /\bno\s+(?:evidence\s+of\s+|signs?\s+of\s+|symptoms?\s+of\s+)?([^.;,\n]{3,40})/gi,
     // "absence of edema"
-    /\babsence\s+of\s+([^.;,]{3,40})/gi,
+    /\babsence\s+of\s+([^.;,\n]{3,40})/gi,
     // "free of disease"
-    /\bfree\s+(?:of|from)\s+([^.;,]{3,40})/gi,
+    /\bfree\s+(?:of|from)\s+([^.;,\n]{3,40})/gi,
   ],
 
   /**
@@ -34,9 +34,9 @@ export const NEGATION_PATTERNS: Record<NegationType, RegExp[]> = {
    */
   denied: [
     // "denies chest pain", "patient denies fever"
-    /\b(?:patient\s+)?denies\s+([^.;,]{3,40})/gi,
+    /\b(?:patient\s+)?denies\s+([^.;,\n]{3,40})/gi,
     // "denied having headaches"
-    /\bdenied\s+(?:having\s+|any\s+)?([^.;,]{3,40})/gi,
+    /\bdenied\s+(?:having\s+|any\s+)?([^.;,\n]{3,40})/gi,
   ],
 
   /**
@@ -44,11 +44,11 @@ export const NEGATION_PATTERNS: Record<NegationType, RegExp[]> = {
    */
   ruled_out: [
     // "rule out MI", "r/o PE"
-    /\b(?:rule[ds]?\s+out|r\/o)\s+([^.;,]{3,40})/gi,
+    /\b(?:rule[ds]?\s+out|r\/o)\s+([^.;,\n]{3,40})/gi,
     // "MI has been ruled out"
-    /\b([^.;,]{3,30})\s+(?:has\s+been\s+|was\s+)?ruled\s+out/gi,
+    /\b([^.;,\n]{3,30})\s+(?:has\s+been\s+|was\s+)?ruled\s+out/gi,
     // "excluded MI"
-    /\bexcluded?\s+([^.;,]{3,40})/gi,
+    /\bexcluded?\s+([^.;,\n]{3,40})/gi,
   ],
 
   /**
@@ -56,11 +56,11 @@ export const NEGATION_PATTERNS: Record<NegationType, RegExp[]> = {
    */
   negative: [
     // "negative for malignancy"
-    /\bnegative\s+(?:for\s+)?([^.;,]{3,40})/gi,
+    /\bnegative\s+(?:for\s+)?([^.;,\n]{3,40})/gi,
     // "troponin negative"
-    /\b([^.;,]{3,30})\s+(?:is\s+|was\s+)?negative/gi,
+    /\b([^.;,\n]{3,30})\s+(?:is\s+|was\s+)?negative/gi,
     // "unremarkable exam"
-    /\b(?:unremarkable|normal)\s+([^.;,]{3,40})/gi,
+    /\b(?:unremarkable|normal)\s+([^.;,\n]{3,40})/gi,
   ],
 
   /**
@@ -68,9 +68,9 @@ export const NEGATION_PATTERNS: Record<NegationType, RegExp[]> = {
    */
   without: [
     // "without edema", "without fever"
-    /\bwithout\s+(?:any\s+|evidence\s+of\s+)?([^.;,]{3,40})/gi,
+    /\bwithout\s+(?:any\s+|evidence\s+of\s+)?([^.;,\n]{3,40})/gi,
     // "not associated with pain"
-    /\bnot\s+associated\s+with\s+([^.;,]{3,40})/gi,
+    /\bnot\s+associated\s+with\s+([^.;,\n]{3,40})/gi,
   ],
 };
 

@@ -92,6 +92,36 @@ const chunker = new MedicalChunker({
 // "Patient denies chest pain" -> { negatedText: "chest pain", type: "denied" }
 ```
 
+### Medication, Temporal & Severity Detection
+
+Medication mentions (drug + dose) are detected and preserved by default, so
+"Metoprolol 25 mg PO BID" is never split across chunks. Temporal expressions
+and severity modifiers are opt-in:
+
+```typescript
+const chunker = new MedicalChunker({
+  preserveMedications: true, // default
+  detectTemporal: true,
+  detectSeverity: true,
+});
+
+const { chunks } = chunker.chunk(
+  'Severe chest pain for 3 days. Started metoprolol 25 mg PO BID.'
+);
+
+chunks[0].metadata.medications;
+// [{ name: 'metoprolol', dose: 25, unit: 'mg', route: 'oral', frequency: 'BID', ... }]
+chunks[0].metadata.temporal;
+// [{ type: 'duration', raw: 'for 3 days', value: 3, unit: 'day', ... }]
+chunks[0].metadata.severity;
+// [{ level: 'severe', term: 'Severe', modifiedText: 'chest pain for 3 days', ... }]
+```
+
+The detectors are also available standalone: `detectMedications()`,
+`detectTemporal()` and `detectSeverity()`. Medication detection is
+pattern-based (no drug lexicon) and ignores vitals and lab values such as
+"weight 80 kg" or "glucose 180 mg/dL".
+
 ### Plugin System
 
 Extend MedDevKit with custom pattern detection via the plugin architecture:
@@ -167,6 +197,9 @@ interface MedicalChunkerConfig {
   preserveSections?: boolean;    // Default: true
   preserveSentences?: boolean;   // Default: true
   detectNegations?: boolean;     // Default: false
+  preserveMedications?: boolean; // Default: true (never split "Metoprolol 25 mg PO BID")
+  detectTemporal?: boolean;      // Default: false
+  detectSeverity?: boolean;      // Default: false
   customPreservePatterns?: RegExp[];
 
   // Plugin System

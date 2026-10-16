@@ -39,3 +39,26 @@ export {
   isTermNegated,
   getNegatedTerms,
 } from './negation';
+
+// Medication detection
+export {
+  MEDICATION_PATTERNS,
+  MEDICATION_CONFIDENCE,
+  detectMedications,
+  getMedicationProtectedRanges,
+  normalizeRoute,
+} from './medications';
+
+// Temporal expression detection
+export {
+  TEMPORAL_PATTERNS,
+  TEMPORAL_CONFIDENCE,
+  detectTemporal,
+} from './temporal';
+
+// Severity modifier detection
+export {
+  SEVERITY_PATTERNS,
+  SEVERITY_CONFIDENCE,
+  detectSeverity,
+} from './severity';

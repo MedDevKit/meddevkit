@@ -45,6 +45,16 @@ export type {
   // Negation types
   NegationContext,
   NegationType,
+  // Medication types
+  MedicationMention,
+  MedicationRoute,
+  // Temporal types
+  TemporalExpression,
+  TemporalType,
+  TemporalUnit,
+  // Severity types
+  SeverityModifier,
+  SeverityLevel,
   // Internal types (for advanced usage)
   ProtectedRange,
   SplitPoint,
@@ -81,6 +91,20 @@ export {
   isTermNegated,
   getNegatedTerms,
   NEGATION_PATTERNS,
+  // Medication detection
+  detectMedications,
+  getMedicationProtectedRanges,
+  normalizeRoute,
+  MEDICATION_PATTERNS,
+  MEDICATION_CONFIDENCE,
+  // Temporal detection
+  detectTemporal,
+  TEMPORAL_PATTERNS,
+  TEMPORAL_CONFIDENCE,
+  // Severity detection
+  detectSeverity,
+  SEVERITY_PATTERNS,
+  SEVERITY_CONFIDENCE,
 } from './patterns';
 
 // Token estimation utilities

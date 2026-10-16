@@ -28,6 +28,9 @@ import type {
   PhiMarker,
   VitalSign,
   NegationContext,
+  MedicationMention,
+  TemporalExpression,
+  SeverityModifier,
   ProtectedRange,
   SplitReason,
   PatternMatch,
@@ -40,6 +43,9 @@ import {
   getSectionBoundaries,
   detectPhi,
   detectNegations,
+  detectMedications,
+  detectTemporal,
+  detectSeverity,
 } from './patterns';
 
 import { estimateTokens, estimateCharsForTokens } from './tokenizer';
@@ -70,6 +76,9 @@ const DEFAULT_CONFIG: Required<MedicalChunkerConfig> = {
   preserveSections: true,
   preserveSentences: true,
   detectNegations: false,
+  preserveMedications: true,
+  detectTemporal: false,
+  detectSeverity: false,
   customPreservePatterns: [],
   plugins: [],
   includePluginPatterns: true,
@@ -85,6 +94,7 @@ const DEFAULT_CONFIG: Required<MedicalChunkerConfig> = {
  *
  * Chunks clinical text while preserving medical context:
  * - Never splits vital signs (e.g., "BP: 120/80 mmHg")
+ * - Never splits medication mentions (e.g., "Metoprolol 25 mg PO BID")
  * - Respects clinical section boundaries
  * - Detects and flags potential PHI
  * - Token-aware chunking for LLM context limits
@@ -157,10 +167,23 @@ export class MedicalChunker {
       ? detectNegations(normalizedText)
       : [];
 
+    const medications = this.config.preserveMedications
+      ? detectMedications(normalizedText)
+      : [];
+
+    const temporal = this.config.detectTemporal
+      ? detectTemporal(normalizedText)
+      : [];
+
+    const severity = this.config.detectSeverity
+      ? detectSeverity(normalizedText)
+      : [];
+
     // Build base protected ranges (regions that should not be split)
     let protectedRanges = this.buildProtectedRanges(
       normalizedText,
       vitals,
+      medications,
       this.config.customPreservePatterns
     );
 
@@ -229,7 +252,10 @@ export class MedicalChunker {
       protectedRanges,
       phiMarkers,
       vitals,
-      negations
+      negations,
+      medications,
+      temporal,
+      severity
     );
 
     // Plugin: onChunkCreated and attach patterns
@@ -266,6 +292,9 @@ export class MedicalChunker {
         containsPhi: phiMarkers.length > 0,
         sectionsDetected: [...new Set(sections.map((s) => s.type))],
         vitalsDetected: vitals.length,
+        medicationsDetected: medications.length,
+        temporalDetected: temporal.length,
+        severityDetected: severity.length,
         // Plugin metadata
         contextVersion: this.pluginManager ? CONTEXT_VERSION : undefined,
         pluginsApplied: this.pluginManager
@@ -334,6 +363,7 @@ export class MedicalChunker {
   private buildProtectedRanges(
     text: string,
     vitals: VitalSign[],
+    medications: MedicationMention[],
     customPatterns: RegExp[]
   ): ProtectedRange[] {
     const ranges: ProtectedRange[] = [];
@@ -344,6 +374,15 @@ export class MedicalChunker {
         start: vital.startOffset,
         end: vital.endOffset,
         reason: 'vital',
+      });
+    }
+
+    // Add medication ranges
+    for (const medication of medications) {
+      ranges.push({
+        start: medication.startOffset,
+        end: medication.endOffset,
+        reason: 'medication',
       });
     }
 
@@ -400,7 +439,10 @@ export class MedicalChunker {
     protectedRanges: ProtectedRange[],
     phiMarkers: PhiMarker[],
     vitals: VitalSign[],
-    negations: NegationContext[]
+    negations: NegationContext[],
+    medications: MedicationMention[],
+    temporal: TemporalExpression[],
+    severity: SeverityModifier[]
   ): MedicalChunk[] {
     const chunks: MedicalChunk[] = [];
     const maxChars = estimateCharsForTokens(this.config.maxTokens);
@@ -456,6 +498,33 @@ export class MedicalChunker {
               endOffset: n.endOffset - position,
             }));
 
+          // Get medications for this chunk
+          const chunkMedications = medications
+            .filter((m) => m.startOffset >= position && m.endOffset <= end)
+            .map((m) => ({
+              ...m,
+              startOffset: m.startOffset - position,
+              endOffset: m.endOffset - position,
+            }));
+
+          // Get temporal expressions for this chunk
+          const chunkTemporal = temporal
+            .filter((t) => t.startOffset >= position && t.endOffset <= end)
+            .map((t) => ({
+              ...t,
+              startOffset: t.startOffset - position,
+              endOffset: t.endOffset - position,
+            }));
+
+          // Get severity modifiers for this chunk
+          const chunkSeverity = severity
+            .filter((s) => s.startOffset >= position && s.endOffset <= end)
+            .map((s) => ({
+              ...s,
+              startOffset: s.startOffset - position,
+              endOffset: s.endOffset - position,
+            }));
+
           // Determine section for this chunk
           const section = getSectionAtPosition(sections, position);
 
@@ -477,6 +546,10 @@ export class MedicalChunker {
               section,
               vitals: chunkVitals.length > 0 ? chunkVitals : undefined,
               negations: chunkNegations.length > 0 ? chunkNegations : undefined,
+              medications:
+                chunkMedications.length > 0 ? chunkMedications : undefined,
+              temporal: chunkTemporal.length > 0 ? chunkTemporal : undefined,
+              severity: chunkSeverity.length > 0 ? chunkSeverity : undefined,
             },
           });
 
@@ -628,6 +701,9 @@ export class MedicalChunker {
         containsPhi: false,
         sectionsDetected: [],
         vitalsDetected: 0,
+        medicationsDetected: 0,
+        temporalDetected: 0,
+        severityDetected: 0,
       },
     };
   }

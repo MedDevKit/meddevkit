@@ -173,3 +173,22 @@ T 99.1°F
 RR 18
 O2 sat 96% on 2L NC
 `.trim();
+
+/**
+ * Note with medications, temporal expressions, and severity modifiers
+ * (synthetic, no real patient data)
+ */
+export const NOTE_WITH_MEDICATIONS = `
+HISTORY OF PRESENT ILLNESS:
+Patient reports severe chest pain for 3 days. Pain started 2 days ago and is intermittent.
+Mild nausea since yesterday. Symptoms are worsening.
+
+MEDICATIONS:
+1. Metoprolol 25 mg PO BID
+2. Aspirin 81 mg daily
+3. Albuterol 2 puffs q4h prn
+4. Insulin glargine 20 units SQ qHS
+
+LABS:
+Glucose 180 mg/dL. Weight 80 kg.
+`.trim();
