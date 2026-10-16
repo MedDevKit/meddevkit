@@ -5,6 +5,7 @@ import {
   NOTE_WITH_PHI,
   LONG_NOTE,
   NOTE_WITH_NEGATIONS,
+  NOTE_WITH_MEDICATIONS,
 } from './fixtures/sample-notes';
 
 describe('MedicalChunker', () => {
@@ -142,6 +143,153 @@ describe('MedicalChunker', () => {
     });
   });
 
+  describe('Medication Preservation', () => {
+    const SPLIT_TEXT =
+      'Patient seen in clinic today and the plan was reviewed with her in detail then continue Metoprolol 25 mg PO BID and recheck pressure at the next visit in clinic';
+
+    it('should preserve medications by default', () => {
+      expect(new MedicalChunker().getConfig().preserveMedications).toBe(true);
+    });
+
+    it('should attach medications with chunk-relative offsets', () => {
+      const chunker = new MedicalChunker({ maxTokens: 512 });
+      const result = chunker.chunk(NOTE_WITH_MEDICATIONS);
+
+      const meds = result.chunks.flatMap((c) =>
+        (c.metadata.medications ?? []).map((m) => ({ chunk: c, m }))
+      );
+      expect(meds.map(({ m }) => m.name)).toEqual([
+        'Metoprolol',
+        'Aspirin',
+        'Albuterol',
+        'Insulin glargine',
+      ]);
+      for (const { chunk, m } of meds) {
+        const absStart = chunk.boundaries.start + m.startOffset;
+        const absEnd = chunk.boundaries.start + m.endOffset;
+        expect(NOTE_WITH_MEDICATIONS.slice(absStart, absEnd)).toBe(m.raw);
+      }
+      expect(meds[0].m).toMatchObject({ dose: 25, unit: 'mg', route: 'oral', frequency: 'BID' });
+    });
+
+    it('should use offsets relative to a later chunk start', () => {
+      const chunker = new MedicalChunker({
+        maxTokens: 25,
+        minTokens: 1,
+        overlapTokens: 0,
+      });
+      const result = chunker.chunk(SPLIT_TEXT);
+      const medChunk = result.chunks.find((c) => c.metadata.medications);
+
+      expect(medChunk).toBeDefined();
+      expect(medChunk!.boundaries.start).toBeGreaterThan(0);
+      const [med] = medChunk!.metadata.medications!;
+      expect(
+        SPLIT_TEXT.slice(
+          medChunk!.boundaries.start + med.startOffset,
+          medChunk!.boundaries.start + med.endOffset
+        )
+      ).toBe('Metoprolol 25 mg PO BID');
+    });
+
+    it('should never split a medication across chunks', () => {
+      const chunker = new MedicalChunker({
+        maxTokens: 25,
+        minTokens: 1,
+        overlapTokens: 0,
+        preserveMedications: true,
+      });
+      const result = chunker.chunk(SPLIT_TEXT);
+
+      const medChunk = result.chunks.find((c) => c.text.includes('Metoprolol'));
+      expect(medChunk?.text).toContain('Metoprolol 25 mg PO BID');
+    });
+
+    it('should split inside the medication when preservation is disabled', () => {
+      const chunker = new MedicalChunker({
+        maxTokens: 25,
+        minTokens: 1,
+        overlapTokens: 0,
+        preserveMedications: false,
+      });
+      const result = chunker.chunk(SPLIT_TEXT);
+
+      const medChunk = result.chunks.find((c) => c.text.includes('Metoprolol'));
+      expect(medChunk?.text).not.toContain('Metoprolol 25 mg PO BID');
+      result.chunks.forEach((c) => expect(c.metadata.medications).toBeUndefined());
+      expect(result.metadata.medicationsDetected).toBe(0);
+    });
+
+    it('should keep every LONG_NOTE medication intact at small maxTokens', () => {
+      const chunker = new MedicalChunker({
+        maxTokens: 30,
+        minTokens: 1,
+        overlapTokens: 0,
+      });
+      const result = chunker.chunk(LONG_NOTE);
+
+      for (const med of [
+        'Metformin 1000mg twice daily',
+        'Lisinopril 20mg daily',
+        'Atorvastatin 40mg daily',
+        'Levothyroxine 75mcg daily',
+        'Acetaminophen 650mg as needed',
+      ]) {
+        expect(result.chunks.some((c) => c.text.includes(med)), med).toBe(true);
+      }
+      expect(result.metadata.medicationsDetected).toBe(5);
+    });
+  });
+
+  describe('Temporal and Severity Detection', () => {
+    it('should be off by default', () => {
+      const chunker = new MedicalChunker();
+      const result = chunker.chunk(NOTE_WITH_MEDICATIONS);
+
+      result.chunks.forEach((chunk) => {
+        expect(chunk.metadata.temporal).toBeUndefined();
+        expect(chunk.metadata.severity).toBeUndefined();
+      });
+      expect(result.metadata.temporalDetected).toBe(0);
+      expect(result.metadata.severityDetected).toBe(0);
+    });
+
+    it('should attach temporal expressions when enabled', () => {
+      const chunker = new MedicalChunker({ detectTemporal: true });
+      const result = chunker.chunk(NOTE_WITH_MEDICATIONS);
+
+      const temporal = result.chunks.flatMap((c) =>
+        (c.metadata.temporal ?? []).map((t) => ({ chunk: c, t }))
+      );
+      expect(temporal.map(({ t }) => t.raw)).toEqual([
+        'for 3 days',
+        'started 2 days ago',
+        'intermittent',
+        'since yesterday',
+        'worsening',
+      ]);
+      for (const { chunk, t } of temporal) {
+        expect(
+          NOTE_WITH_MEDICATIONS.slice(
+            chunk.boundaries.start + t.startOffset,
+            chunk.boundaries.start + t.endOffset
+          )
+        ).toBe(t.raw);
+      }
+      expect(result.metadata.temporalDetected).toBe(5);
+    });
+
+    it('should attach severity modifiers when enabled', () => {
+      const chunker = new MedicalChunker({ detectSeverity: true });
+      const result = chunker.chunk(NOTE_WITH_MEDICATIONS);
+
+      const severity = result.chunks.flatMap((c) => c.metadata.severity ?? []);
+      expect(severity.map((s) => s.level)).toEqual(['severe', 'mild']);
+      expect(severity[0].modifiedText).toContain('chest pain');
+      expect(result.metadata.severityDetected).toBe(2);
+    });
+  });
+
   describe('Boundary Information', () => {
     it('should provide accurate boundary positions', () => {
       const chunker = new MedicalChunker({ maxTokens: 100 });
@@ -195,6 +343,26 @@ describe('MedicalChunker', () => {
       const result = chunker.chunk(SIMPLE_NOTE);
 
       expect(result.metadata.vitalsDetected).toBeGreaterThan(0);
+    });
+
+    it('should include medication, temporal, and severity counts', () => {
+      const chunker = new MedicalChunker({
+        detectTemporal: true,
+        detectSeverity: true,
+      });
+      const result = chunker.chunk(NOTE_WITH_MEDICATIONS);
+
+      expect(result.metadata.medicationsDetected).toBe(4);
+      expect(result.metadata.temporalDetected).toBe(5);
+      expect(result.metadata.severityDetected).toBe(2);
+    });
+
+    it('should report zero counts for empty input', () => {
+      const result = new MedicalChunker().chunk('');
+
+      expect(result.metadata.medicationsDetected).toBe(0);
+      expect(result.metadata.temporalDetected).toBe(0);
+      expect(result.metadata.severityDetected).toBe(0);
     });
   });
 

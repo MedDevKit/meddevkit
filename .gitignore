@@ -40,3 +40,10 @@ coverage/
 .changeset/*.md
 !.changeset/README.md
 !.changeset/config.json
+
+# Playwright MCP output (screenshots, snapshots, console logs)
+playwright-output/
+.playwright-mcp/
+
+# Vercel (preview deployments only; production is GitHub Pages)
+.vercel/

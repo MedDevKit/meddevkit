@@ -29,10 +29,9 @@ export default function SummaryBar({
   const { metadata } = result;
 
   if (compareMode && naiveResult && brokenPatterns) {
-    const vitalsPreserved = result.chunks.reduce(
-      (sum, c) => sum + (c.metadata.vitals?.length ?? 0),
-      0,
-    );
+    // Document-level counts: per-chunk lists also include items in the overlap text
+    const vitalsPreserved = metadata.vitalsDetected;
+    const medsPreserved = metadata.medicationsDetected;
     const uniqueBroken = new Set(brokenPatterns.map((bp) => bp.originalText)).size;
 
     const stats = [
@@ -40,6 +39,7 @@ export default function SummaryBar({
       { label: 'MedDevKit', value: metadata.totalChunks, icon: '□', color: 'text-emerald-600' },
       { label: 'Broken Patterns', value: uniqueBroken, icon: '⚠', color: 'text-orange-600' },
       { label: 'Vitals Preserved', value: vitalsPreserved, icon: '💙', color: 'text-emerald-600' },
+      { label: 'Meds Preserved', value: medsPreserved, icon: '💊', color: 'text-emerald-600' },
     ];
 
     return (
@@ -66,6 +66,9 @@ export default function SummaryBar({
     { label: 'PHI', value: detections.phi.length, icon: '🔴', color: 'text-red-600' },
     { label: 'Sections', value: metadata.sectionsDetected.length, icon: '📋', color: 'text-emerald-600' },
     { label: 'Negations', value: detections.negations.length, icon: '🟠', color: 'text-amber-600' },
+    { label: 'Meds', value: detections.medications.length, icon: '💊', color: 'text-violet-600' },
+    { label: 'Temporal', value: detections.temporal.length, icon: '⏱', color: 'text-cyan-600' },
+    { label: 'Severity', value: detections.severity.length, icon: '▲', color: 'text-fuchsia-600' },
   ];
 
   return (

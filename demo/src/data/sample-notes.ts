@@ -205,7 +205,42 @@ ASSESSMENT:
 2. Denies any allergies to medications
 3. Pain scale 4/10, without radiation`;
 
-export type PresetKey = 'complex' | 'phi' | 'simple' | 'vitals' | 'negations';
+export const MEDS_NOTE = `CHIEF COMPLAINT: Chest pain and shortness of breath
+
+HISTORY OF PRESENT ILLNESS:
+58 year old male presents with severe chest pain for 3 days.
+Pain started 2 days ago as intermittent pressure and has been worsening since last night.
+Reports mild dyspnea on exertion and moderate edema in both ankles.
+Also describes the worst headache of my life this morning.
+Denies fever or cough. No syncope.
+
+VITAL SIGNS:
+BP: 152/94 mmHg
+HR: 104 bpm
+O2 sat: 94% on room air
+
+MEDICATIONS:
+Metoprolol 25 mg PO BID
+lisinopril 10mg daily
+Albuterol 2 puffs q4h prn
+acetaminophen 650mg as needed
+
+ED COURSE:
+Gave 4 mg ondansetron IV for nausea.
+heparin 5000 units SQ q8h started for DVT prophylaxis.
+
+ASSESSMENT:
+1. Chest pain - rule out acute coronary syndrome
+2. Headache - evaluate for hypertensive emergency
+3. Peripheral edema - likely volume overload
+
+PLAN:
+- Serial troponins and ECG
+- CT head without contrast
+- Continue home Metoprolol 25 mg PO BID
+- Cardiology consult`;
+
+export type PresetKey = 'complex' | 'phi' | 'simple' | 'vitals' | 'negations' | 'meds';
 
 export const PRESETS: Record<PresetKey, { label: string; note: string; description: string }> = {
   complex: {
@@ -232,5 +267,10 @@ export const PRESETS: Record<PresetKey, { label: string; note: string; descripti
     label: 'Negations',
     note: NEGATIONS_NOTE,
     description: 'Denials, rule-outs, and negative findings',
+  },
+  meds: {
+    label: 'Meds & Course',
+    note: MEDS_NOTE,
+    description: 'Medication doses, symptom timeline, severity',
   },
 };

@@ -417,4 +417,39 @@ Abdomen: Soft, non-tender, no masses.`;
       expect(types).toContain('negative');
     });
   });
+
+  describe('Line breaks', () => {
+    it('should not extend a ruled-out span into the next list item', () => {
+      const text = '1. Chest pain - rule out acute coronary syndrome\n2. Headache';
+      const negations = detectNegations(text);
+
+      expect(negations).toHaveLength(1);
+      expect(negations[0].type).toBe('ruled_out');
+      expect(negations[0].negatedText).toBe('acute coronary syndrome');
+      expect(text.slice(negations[0].startOffset, negations[0].endOffset)).not.toContain('\n');
+    });
+
+    it('should not extend a "without" span into the next bullet', () => {
+      const text = '- CT head without contrast\n- Continue home Metoprolol 25 mg PO BID';
+      const negations = detectNegations(text);
+
+      expect(negations).toHaveLength(1);
+      expect(negations[0].type).toBe('without');
+      expect(negations[0].negatedText).toBe('contrast');
+    });
+
+    it('should keep each list line separate', () => {
+      const text = '- Denies fever\n- No chest pain\n- Negative for malignancy\nPlan: follow up';
+      const negations = detectNegations(text);
+
+      expect(negations.map((n) => n.negatedText)).toEqual([
+        'fever',
+        'chest pain',
+        'malignancy',
+      ]);
+      negations.forEach((n) => {
+        expect(text.slice(n.startOffset, n.endOffset)).not.toContain('\n');
+      });
+    });
+  });
 });

@@ -1,3 +1,4 @@
+import type { MedicationRoute } from '@meddevkit/chunker';
 import type { DetectionResults } from '../hooks/useChunker';
 
 interface AnnotatedViewProps {
@@ -7,13 +8,16 @@ interface AnnotatedViewProps {
     preserveVitals: boolean;
     phiDetection: boolean;
     detectNegations: boolean;
+    preserveMedications: boolean;
+    detectTemporal: boolean;
+    detectSeverity: boolean;
   };
 }
 
 interface Span {
   start: number;
   end: number;
-  type: 'phi' | 'vital' | 'section' | 'negation';
+  type: 'phi' | 'vital' | 'section' | 'negation' | 'medication' | 'temporal' | 'severity';
   label?: string;
   confidence?: number;
 }
@@ -23,7 +27,26 @@ const TYPE_STYLES: Record<Span['type'], { bg: string; text: string; border: stri
   vital: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' },
   section: { bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-300' },
   negation: { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-300' },
+  medication: { bg: 'bg-violet-100', text: 'text-violet-800', border: 'border-violet-300' },
+  temporal: { bg: 'bg-cyan-100', text: 'text-cyan-800', border: 'border-cyan-300' },
+  severity: { bg: 'bg-fuchsia-100', text: 'text-fuchsia-800', border: 'border-fuchsia-300' },
 };
+
+const ROUTE_ABBREVIATIONS: Partial<Record<MedicationRoute, string>> = {
+  oral: 'po',
+  intravenous: 'iv',
+  intramuscular: 'im',
+  subcutaneous: 'sq',
+  sublingual: 'sl',
+  inhaled: 'inh',
+  topical: 'top',
+  rectal: 'pr',
+};
+
+function medicationLabel(route?: MedicationRoute): string {
+  const abbr = route ? ROUTE_ABBREVIATIONS[route] : undefined;
+  return abbr ? `rx · ${abbr}` : 'rx';
+}
 
 function buildSpans(text: string, detections: DetectionResults, config: AnnotatedViewProps['config']): Span[] {
   const spans: Span[] = [];
@@ -70,6 +93,42 @@ function buildSpans(text: string, detections: DetectionResults, config: Annotate
         type: 'negation',
         label: n.type,
         confidence: n.confidence,
+      });
+    }
+  }
+
+  if (config.preserveMedications) {
+    for (const m of detections.medications) {
+      spans.push({
+        start: m.startOffset,
+        end: m.endOffset,
+        type: 'medication',
+        label: medicationLabel(m.route),
+        confidence: m.confidence,
+      });
+    }
+  }
+
+  if (config.detectTemporal) {
+    for (const t of detections.temporal) {
+      spans.push({
+        start: t.startOffset,
+        end: t.endOffset,
+        type: 'temporal',
+        label: t.type,
+        confidence: t.confidence,
+      });
+    }
+  }
+
+  if (config.detectSeverity) {
+    for (const sv of detections.severity) {
+      spans.push({
+        start: sv.startOffset,
+        end: sv.endOffset,
+        type: 'severity',
+        label: sv.level,
+        confidence: sv.confidence,
       });
     }
   }
@@ -143,7 +202,15 @@ export default function AnnotatedView({ text, detections, config }: AnnotatedVie
             }
 
             // Use the highest-priority type for the background
-            const priorityOrder: Span['type'][] = ['phi', 'vital', 'negation', 'section'];
+            const priorityOrder: Span['type'][] = [
+              'phi',
+              'vital',
+              'medication',
+              'negation',
+              'severity',
+              'temporal',
+              'section',
+            ];
             const primaryType = priorityOrder.find((t) =>
               seg.types.some((s) => s.type === t),
             );
@@ -190,6 +257,9 @@ function Legend({ config }: { config: AnnotatedViewProps['config'] }) {
     { label: 'Vitals', color: 'bg-blue-400', active: config.preserveVitals },
     { label: 'PHI', color: 'bg-red-400', active: config.phiDetection },
     { label: 'Negations', color: 'bg-amber-400', active: config.detectNegations },
+    { label: 'Medications', color: 'bg-violet-400', active: config.preserveMedications },
+    { label: 'Temporal', color: 'bg-cyan-400', active: config.detectTemporal },
+    { label: 'Severity', color: 'bg-fuchsia-400', active: config.detectSeverity },
   ];
 
   return (

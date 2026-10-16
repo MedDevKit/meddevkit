@@ -106,6 +106,24 @@ export default function InputPanel({
             onChange={(v) => onConfigChange({ ...config, detectNegations: v })}
             color="amber"
           />
+          <Toggle
+            label="Preserve Medications"
+            checked={config.preserveMedications}
+            onChange={(v) => onConfigChange({ ...config, preserveMedications: v })}
+            color="violet"
+          />
+          <Toggle
+            label="Temporal Detection"
+            checked={config.detectTemporal}
+            onChange={(v) => onConfigChange({ ...config, detectTemporal: v })}
+            color="cyan"
+          />
+          <Toggle
+            label="Severity Detection"
+            checked={config.detectSeverity}
+            onChange={(v) => onConfigChange({ ...config, detectSeverity: v })}
+            color="fuchsia"
+          />
         </div>
 
         <button
@@ -137,12 +155,15 @@ function Toggle({
   label: string;
   checked: boolean;
   onChange: (v: boolean) => void;
-  color: 'blue' | 'red' | 'amber';
+  color: 'blue' | 'red' | 'amber' | 'violet' | 'cyan' | 'fuchsia';
 }) {
   const colorMap = {
     blue: 'bg-blue-500',
     red: 'bg-red-500',
     amber: 'bg-amber-500',
+    violet: 'bg-violet-500',
+    cyan: 'bg-cyan-500',
+    fuchsia: 'bg-fuchsia-500',
   };
 
   return (

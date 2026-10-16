@@ -31,7 +31,7 @@ export const VITAL_PATTERNS: Record<VitalType, RegExp> = {
    * - "B/P: 120/80"
    */
   blood_pressure:
-    /\b(?:BP|B\/P|blood\s+pressure)(?:\s+(?:is|was|reads?|at|of|shows?|measures?))?[:\s]*(\d{2,3})\s*(?:[\/\\]|over\s+)(\d{2,3})(?:\s*(?:mmHg|mm\s*Hg))?\b/gi,
+    /\b(?:BP|B\/P|blood\s+pressure)(?:\s+(?:is|was|reads?|at|of|shows?|measures?))?[:\s]*(\d{2,3})\s*(?:[/\\]|over\s+)(\d{2,3})(?:\s*(?:mmHg|mm\s*Hg))?\b/gi,
 
   /**
    * Heart Rate patterns:

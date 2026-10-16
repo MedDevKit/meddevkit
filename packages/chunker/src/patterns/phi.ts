@@ -28,7 +28,7 @@ const BASIC_PHI_PATTERNS: Record<Exclude<PhiType, 'unknown'>, RegExp[]> = {
    */
   date: [
     // MM/DD/YYYY or MM-DD-YYYY
-    /\b(0?[1-9]|1[0-2])[\/\-](0?[1-9]|[12]\d|3[01])[\/\-](\d{4}|\d{2})\b/g,
+    /\b(0?[1-9]|1[0-2])[/-](0?[1-9]|[12]\d|3[01])[/-](\d{4}|\d{2})\b/g,
     // Written dates: January 15, 2024
     /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}\b/gi,
     // DOB explicit mention
@@ -59,7 +59,7 @@ const BASIC_PHI_PATTERNS: Record<Exclude<PhiType, 'unknown'>, RegExp[]> = {
    * Email address patterns
    */
   email: [
-    /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g,
+    /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,
   ],
 
   /**
@@ -150,7 +150,7 @@ const PHI_CONFIDENCE: Record<PhiType, number> = {
  *
  * @remarks
  * This is basic PHI flagging only. For HIPAA-compliant de-identification,
- * use a certified solution or OpenMedRAG Cloud.
+ * use a certified solution or MedDevKit Cloud.
  */
 export function detectPhi(
   text: string,
@@ -158,8 +158,7 @@ export function detectPhi(
 ): PhiMarker[] {
   if (mode === 'enhanced') {
     console.warn(
-      '[OpenMedRAG] Enhanced PHI detection requires OpenMedRAG Cloud. ' +
-        'Falling back to basic detection. Visit https://openmedrag.com for enterprise features.'
+      '[MedDevKit] Enhanced PHI detection requires MedDevKit Cloud. Falling back to basic detection.'
     );
   }
 

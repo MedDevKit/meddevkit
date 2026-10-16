@@ -92,7 +92,7 @@ export default function ComparisonPanel({
           <span className="text-slate-300">|</span>
           <span className="text-slate-500">
             <span className="font-semibold text-emerald-600">
-              {result.chunks.reduce((sum, c) => sum + (c.metadata.vitals?.length ?? 0), 0)}
+              {result.metadata.vitalsDetected}
             </span>
             {' vitals preserved'}
           </span>
@@ -272,7 +272,7 @@ function renderWithBrokenHighlights(
 }
 
 function renderAnnotatedChunkText(chunk: MedicalChunk): React.ReactNode {
-  const chunkStart = chunk.boundaries.start;
+  // Chunk metadata offsets are already relative to chunk.text
 
   interface ASpan {
     start: number;
@@ -286,8 +286,8 @@ function renderAnnotatedChunkText(chunk: MedicalChunk): React.ReactNode {
 
   for (const p of chunk.phiMarkers) {
     spans.push({
-      start: p.startOffset - chunkStart,
-      end: p.endOffset - chunkStart,
+      start: p.startOffset,
+      end: p.endOffset,
       type: 'phi',
       label: p.type,
       confidence: p.confidence,
@@ -296,8 +296,8 @@ function renderAnnotatedChunkText(chunk: MedicalChunk): React.ReactNode {
 
   for (const v of chunk.metadata.vitals ?? []) {
     spans.push({
-      start: v.startOffset - chunkStart,
-      end: v.endOffset - chunkStart,
+      start: v.startOffset,
+      end: v.endOffset,
       type: 'vital',
       label: v.type.replace(/_/g, ' '),
     });
@@ -305,8 +305,8 @@ function renderAnnotatedChunkText(chunk: MedicalChunk): React.ReactNode {
 
   for (const n of chunk.metadata.negations ?? []) {
     spans.push({
-      start: n.startOffset - chunkStart,
-      end: n.endOffset - chunkStart,
+      start: n.startOffset,
+      end: n.endOffset,
       type: 'negation',
       label: n.type,
       confidence: n.confidence,

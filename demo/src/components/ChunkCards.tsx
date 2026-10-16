@@ -55,6 +55,9 @@ export default function ChunkCards({ result }: ChunkCardsProps) {
           const vitalsCount = chunk.metadata.vitals?.length ?? 0;
           const negationsCount = chunk.metadata.negations?.length ?? 0;
           const phiCount = chunk.phiMarkers.length;
+          const medsCount = chunk.metadata.medications?.length ?? 0;
+          const temporalCount = chunk.metadata.temporal?.length ?? 0;
+          const severityCount = chunk.metadata.severity?.length ?? 0;
 
           return (
             <div
@@ -83,7 +86,12 @@ export default function ChunkCards({ result }: ChunkCardsProps) {
                 </p>
               </div>
 
-              {(phiCount > 0 || vitalsCount > 0 || negationsCount > 0) && (
+              {(phiCount > 0 ||
+                vitalsCount > 0 ||
+                negationsCount > 0 ||
+                medsCount > 0 ||
+                temporalCount > 0 ||
+                severityCount > 0) && (
                 <div className="flex gap-2 px-3 py-2 border-t border-slate-100">
                   {phiCount > 0 && (
                     <Badge color="red" label={`PHI: ${phiCount}`} />
@@ -93,6 +101,15 @@ export default function ChunkCards({ result }: ChunkCardsProps) {
                   )}
                   {negationsCount > 0 && (
                     <Badge color="amber" label={`Neg: ${negationsCount}`} />
+                  )}
+                  {medsCount > 0 && (
+                    <Badge color="violet" label={`Meds: ${medsCount}`} />
+                  )}
+                  {temporalCount > 0 && (
+                    <Badge color="cyan" label={`Time: ${temporalCount}`} />
+                  )}
+                  {severityCount > 0 && (
+                    <Badge color="fuchsia" label={`Sev: ${severityCount}`} />
                   )}
                 </div>
               )}
@@ -104,11 +121,20 @@ export default function ChunkCards({ result }: ChunkCardsProps) {
   );
 }
 
-function Badge({ color, label }: { color: 'red' | 'blue' | 'amber'; label: string }) {
+function Badge({
+  color,
+  label,
+}: {
+  color: 'red' | 'blue' | 'amber' | 'violet' | 'cyan' | 'fuchsia';
+  label: string;
+}) {
   const colorMap = {
     red: 'bg-red-50 text-red-600 border-red-200',
     blue: 'bg-blue-50 text-blue-600 border-blue-200',
     amber: 'bg-amber-50 text-amber-600 border-amber-200',
+    violet: 'bg-violet-50 text-violet-600 border-violet-200',
+    cyan: 'bg-cyan-50 text-cyan-600 border-cyan-200',
+    fuchsia: 'bg-fuchsia-50 text-fuchsia-600 border-fuchsia-200',
   };
 
   return (

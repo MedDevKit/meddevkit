@@ -1,5 +1,5 @@
 /**
- * OpenMedRAG Chunker Types
+ * MedDevKit Chunker Types
  * Core interfaces for medical text chunking
  *
  * @packageDocumentation
@@ -29,8 +29,10 @@ export interface MedicalChunkerConfig {
   phiDetection?: 'none' | 'basic' | 'enhanced';
 
   /**
-   * Maximum tokens per chunk
-   * Uses tiktoken-compatible estimation (~4 chars per token)
+   * Maximum tokens per chunk (core content, before overlap)
+   * Uses tiktoken-compatible estimation (~4 chars per token).
+   * Overlap is added on top of this budget, so a chunk's tokenCount may
+   * exceed maxTokens by up to overlapTokens.
    * @default 512
    */
   maxTokens?: number;
@@ -42,7 +44,16 @@ export interface MedicalChunkerConfig {
   minTokens?: number;
 
   /**
-   * Overlap tokens between chunks for context preservation
+   * Overlap tokens between chunks for context preservation.
+   *
+   * Every chunk after the first is prefixed with up to this many tokens of
+   * the text immediately preceding its core range. The overlap is a
+   * contiguous slice of the normalized text that starts at a word boundary
+   * (preferring a sentence or line start) and never inside a protected range
+   * (vital, medication, custom/plugin range) or PHI marker. Overlap is
+   * additive: chunk tokenCount may exceed maxTokens by up to overlapTokens.
+   * All offset-bearing chunk fields (phiMarkers, vitals, negations, etc.)
+   * are relative to the final chunk.text, overlap included.
    * @default 50
    */
   overlapTokens?: number;
@@ -65,6 +76,28 @@ export interface MedicalChunkerConfig {
    * @default false
    */
   detectNegations?: boolean;
+
+  /**
+   * Preserve medication mentions - prevents splitting on
+   * "Metoprolol 25 mg PO BID". Detected medications become protected
+   * ranges (like vitals) and are attached to chunk metadata.
+   * @default true
+   */
+  preserveMedications?: boolean;
+
+  /**
+   * Detect and annotate temporal expressions
+   * ("for 3 days", "started 2 days ago", "intermittent")
+   * @default false
+   */
+  detectTemporal?: boolean;
+
+  /**
+   * Detect and annotate severity modifiers
+   * ("mild", "severe chest pain", "life-threatening")
+   * @default false
+   */
+  detectSeverity?: boolean;
 
   /**
    * Custom patterns to preserve (will not be split)
@@ -178,14 +211,24 @@ export type PhiType =
  */
 export interface ChunkBoundary {
   /**
-   * Start position in original text
+   * Start of the chunk's core (non-overlap) range, as an offset into the
+   * normalized text. Core ranges of consecutive chunks do not overlap.
    */
   start: number;
 
   /**
-   * End position in original text
+   * End (exclusive) of the chunk's core range in the normalized text.
+   * chunk.text always ends here (minus trailing whitespace).
    */
   end: number;
+
+  /**
+   * Offset in the normalized text where chunk.text actually begins when
+   * overlap from the preceding text was prepended (always < start).
+   * Absent when the chunk has no overlap. Offsets in phiMarkers and chunk
+   * metadata are relative to this position when present.
+   */
+  overlapStart?: number;
 
   /**
    * Type of boundary that caused the split
@@ -236,6 +279,21 @@ export interface ChunkMetadata {
    * Negated findings in this chunk
    */
   negations?: NegationContext[];
+
+  /**
+   * Medication mentions found in this chunk
+   */
+  medications?: MedicationMention[];
+
+  /**
+   * Temporal expressions found in this chunk
+   */
+  temporal?: TemporalExpression[];
+
+  /**
+   * Severity modifiers found in this chunk
+   */
+  severity?: SeverityModifier[];
 
   /**
    * Pattern matches from plugins, keyed by plugin ID
@@ -402,6 +460,191 @@ export type NegationType =
   | 'without'; // "without edema"
 
 // ============================================================================
+// Medication Types
+// ============================================================================
+
+/**
+ * A detected medication mention (drug name + dose)
+ *
+ * Pattern-based only - no drug lexicon is used, so `name` is the
+ * 1-2 word token(s) immediately preceding the dose.
+ */
+export interface MedicationMention {
+  /**
+   * Medication name as it appears (e.g., "Metoprolol", "insulin glargine")
+   */
+  name: string;
+
+  /**
+   * Raw text of the full mention (name through route/frequency)
+   */
+  raw: string;
+
+  /**
+   * Parsed dose (lower bound for ranges, e.g. 1 in "1-2 tabs")
+   */
+  dose?: number;
+
+  /**
+   * Upper bound of a dose range (e.g. 2 in "1-2 tabs")
+   */
+  doseMax?: number;
+
+  /**
+   * Dose unit as it appears (e.g., "mg", "units", "puffs")
+   */
+  unit?: string;
+
+  /**
+   * Normalized route of administration (PO -> 'oral', IV -> 'intravenous')
+   */
+  route?: MedicationRoute;
+
+  /**
+   * Frequency as it appears (e.g., "BID", "q4h prn", "twice daily")
+   */
+  frequency?: string;
+
+  /**
+   * Start position in text
+   */
+  startOffset: number;
+
+  /**
+   * End position in text
+   */
+  endOffset: number;
+
+  /**
+   * Detection confidence (0-1); higher when route/frequency are present
+   */
+  confidence: number;
+}
+
+/**
+ * Normalized routes of administration
+ */
+export type MedicationRoute =
+  | 'oral' // PO, by mouth
+  | 'intravenous' // IV, IVPB
+  | 'intramuscular' // IM
+  | 'subcutaneous' // SQ, SC, subcut
+  | 'sublingual' // SL
+  | 'topical'
+  | 'inhaled' // inhaled, neb
+  | 'rectal' // PR
+  | 'other';
+
+// ============================================================================
+// Temporal Types
+// ============================================================================
+
+/**
+ * A detected temporal expression
+ */
+export interface TemporalExpression {
+  /**
+   * Kind of temporal expression
+   */
+  type: TemporalType;
+
+  /**
+   * Raw text as it appears
+   */
+  raw: string;
+
+  /**
+   * Parsed numeric quantity ("3" in "for 3 days"); undefined for vague
+   * quantities ("for several days") and non-numeric expressions
+   */
+  value?: number;
+
+  /**
+   * Normalized time unit
+   */
+  unit?: TemporalUnit;
+
+  /**
+   * Start position in text
+   */
+  startOffset: number;
+
+  /**
+   * End position in text
+   */
+  endOffset: number;
+
+  /**
+   * Detection confidence (0-1)
+   */
+  confidence: number;
+}
+
+/**
+ * Types of temporal expressions
+ */
+export type TemporalType =
+  | 'duration' // "for 3 days", "x 2 weeks"
+  | 'onset' // "started 2 days ago", "since yesterday"
+  | 'relative' // "yesterday", "2 weeks ago"
+  | 'course'; // "intermittent", "worsening"
+
+/**
+ * Normalized time units
+ */
+export type TemporalUnit =
+  | 'minute'
+  | 'hour'
+  | 'day'
+  | 'week'
+  | 'month'
+  | 'year';
+
+// ============================================================================
+// Severity Types
+// ============================================================================
+
+/**
+ * A detected severity modifier
+ */
+export interface SeverityModifier {
+  /**
+   * Normalized severity level
+   */
+  level: SeverityLevel;
+
+  /**
+   * Severity term as it appears (e.g., "severe", "mild-to-moderate")
+   */
+  term: string;
+
+  /**
+   * The finding the term modifies ("chest pain" in "severe chest pain")
+   */
+  modifiedText?: string;
+
+  /**
+   * Start position in text (start of the term)
+   */
+  startOffset: number;
+
+  /**
+   * End position in text (end of modifiedText, or of the term if none)
+   */
+  endOffset: number;
+
+  /**
+   * Detection confidence (0-1)
+   */
+  confidence: number;
+}
+
+/**
+ * Normalized severity levels
+ */
+export type SeverityLevel = 'mild' | 'moderate' | 'severe' | 'critical';
+
+// ============================================================================
 // Processing Result Types
 // ============================================================================
 
@@ -465,6 +708,21 @@ export interface ProcessingMetadata {
   vitalsDetected: number;
 
   /**
+   * Total medication mentions detected (0 when preserveMedications is false)
+   */
+  medicationsDetected: number;
+
+  /**
+   * Total temporal expressions detected (0 when detectTemporal is false)
+   */
+  temporalDetected: number;
+
+  /**
+   * Total severity modifiers detected (0 when detectSeverity is false)
+   */
+  severityDetected: number;
+
+  /**
    * MedDevKit Context version used for processing
    */
   contextVersion?: string;
@@ -506,7 +764,7 @@ export interface ProtectedRange {
   /**
    * Reason this range is protected
    */
-  reason: 'vital' | 'custom' | 'sentence' | 'plugin';
+  reason: 'vital' | 'medication' | 'custom' | 'sentence' | 'plugin';
 }
 
 /**
@@ -774,7 +1032,11 @@ export interface PatternPlugin {
   ): PatternMatch[];
 
   /**
-   * Called after each chunk is created, can modify chunk
+   * Called after each chunk is created, can modify chunk.
+   *
+   * Runs after overlap has been applied, so chunk.text, phiMarkers and all
+   * metadata offsets are final and relative to chunk.text. Changes made
+   * here are not revisited by the chunker.
    */
   onChunkCreated?(chunk: MedicalChunk, ctx: MedDevKitContext): MedicalChunk;
 

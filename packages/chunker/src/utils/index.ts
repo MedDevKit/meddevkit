@@ -18,6 +18,7 @@ export {
   findSentenceBoundary,
   findParagraphBoundary,
   findWordBoundary,
+  findOverlapStart,
   mergeRanges,
   isWithinRanges,
   getRangeAtPosition,

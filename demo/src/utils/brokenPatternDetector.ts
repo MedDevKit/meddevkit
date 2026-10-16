@@ -1,8 +1,8 @@
-import { detectVitals, detectSections } from '@meddevkit/chunker';
+import { detectVitals, detectSections, detectMedications } from '@meddevkit/chunker';
 import type { NaiveChunk } from './naiveChunker';
 
 export interface BrokenPattern {
-  type: 'vital' | 'section';
+  type: 'vital' | 'section' | 'medication';
   originalText: string;
   chunkIndex: number;
   fragmentInChunk: string;
@@ -23,58 +23,59 @@ export function detectBrokenPatterns(
   const broken: BrokenPattern[] = [];
   const vitals = detectVitals(originalText);
   const sections = detectSections(originalText);
+  const medications = detectMedications(originalText);
 
-  // Check vitals — these have both startOffset and endOffset
+  // Check vitals and medications — these have both startOffset and endOffset
   for (const vital of vitals) {
-    const spanning = findSpanningChunks(vital.startOffset, vital.endOffset, naiveChunks);
-    if (spanning.length > 1) {
-      for (const chunkIdx of spanning) {
-        const chunk = naiveChunks[chunkIdx];
-        const overlapStart = Math.max(vital.startOffset, chunk.startOffset);
-        const overlapEnd = Math.min(vital.endOffset, chunk.endOffset);
-        const fragment = originalText.slice(overlapStart, overlapEnd);
-        if (!fragment.trim()) continue; // skip whitespace-only fragments
-
-        broken.push({
-          type: 'vital',
-          originalText: vital.raw,
-          chunkIndex: chunkIdx,
-          fragmentInChunk: fragment,
-          isStart: chunkIdx === spanning[0],
-          startOffset: overlapStart - chunk.startOffset,
-          endOffset: overlapEnd - chunk.startOffset,
-        });
-      }
-    }
+    pushBrokenFragments(broken, 'vital', vital.raw, vital.startOffset, vital.endOffset, originalText, naiveChunks);
+  }
+  for (const med of medications) {
+    pushBrokenFragments(broken, 'medication', med.raw, med.startOffset, med.endOffset, originalText, naiveChunks);
   }
 
   // Check sections — only have startOffset, so check if section header line is split
   for (const section of sections) {
     const headerEnd = findLineEnd(originalText, section.startOffset);
-    const spanning = findSpanningChunks(section.startOffset, headerEnd, naiveChunks);
-    if (spanning.length > 1) {
-      const headerText = originalText.slice(section.startOffset, headerEnd);
-      for (const chunkIdx of spanning) {
-        const chunk = naiveChunks[chunkIdx];
-        const overlapStart = Math.max(section.startOffset, chunk.startOffset);
-        const overlapEnd = Math.min(headerEnd, chunk.endOffset);
-        const fragment = originalText.slice(overlapStart, overlapEnd);
-        if (!fragment.trim()) continue; // skip whitespace-only fragments
-
-        broken.push({
-          type: 'section',
-          originalText: headerText,
-          chunkIndex: chunkIdx,
-          fragmentInChunk: fragment,
-          isStart: chunkIdx === spanning[0],
-          startOffset: overlapStart - chunk.startOffset,
-          endOffset: overlapEnd - chunk.startOffset,
-        });
-      }
-    }
+    const headerText = originalText.slice(section.startOffset, headerEnd);
+    pushBrokenFragments(broken, 'section', headerText, section.startOffset, headerEnd, originalText, naiveChunks);
   }
 
   return broken;
+}
+
+/**
+ * Record one BrokenPattern per non-whitespace fragment when a pattern
+ * [patternStart, patternEnd) spans more than one naive chunk.
+ */
+function pushBrokenFragments(
+  broken: BrokenPattern[],
+  type: BrokenPattern['type'],
+  originalPattern: string,
+  patternStart: number,
+  patternEnd: number,
+  originalText: string,
+  naiveChunks: NaiveChunk[],
+): void {
+  const spanning = findSpanningChunks(patternStart, patternEnd, naiveChunks);
+  if (spanning.length <= 1) return;
+
+  for (const chunkIdx of spanning) {
+    const chunk = naiveChunks[chunkIdx];
+    const overlapStart = Math.max(patternStart, chunk.startOffset);
+    const overlapEnd = Math.min(patternEnd, chunk.endOffset);
+    const fragment = originalText.slice(overlapStart, overlapEnd);
+    if (!fragment.trim()) continue; // skip whitespace-only fragments
+
+    broken.push({
+      type,
+      originalText: originalPattern,
+      chunkIndex: chunkIdx,
+      fragmentInChunk: fragment,
+      isStart: chunkIdx === spanning[0],
+      startOffset: overlapStart - chunk.startOffset,
+      endOffset: overlapEnd - chunk.startOffset,
+    });
+  }
 }
 
 function findSpanningChunks(

@@ -30,6 +30,9 @@ Designed for **immediate feedback** during text input or voice transcription.
 | `detectSections()` | Identify clinical note sections | Show "HPI" header when detected |
 | `detectVitals()` | Extract vital sign measurements | Format "BP 120/80" specially in UI |
 | `detectPhi()` | Flag potential PHI | Warn before submission |
+| `detectMedications()` | Extract drug + dose mentions | Show "Metoprolol 25 mg PO BID" as a structured med |
+| `detectTemporal()` | Find durations, onset, relative time, course | Highlight "for 3 days", "started yesterday" |
+| `detectSeverity()` | Find severity modifiers and the finding they modify | Flag "severe chest pain" |
 
 **Characteristics:**
 - Stateless functions
@@ -60,6 +63,7 @@ Designed for **preparing completed documents** for downstream processing (RAG, L
 | Token-aware splitting | Respect LLM context limits (~512 tokens default) |
 | Section boundary detection | Prefer splitting at "ASSESSMENT:" not mid-sentence |
 | Vital sign preservation | Never split "BP: 120/80 mmHg" |
+| Medication preservation | Never split "Metoprolol 25 mg PO BID" (`preserveMedications`, default on) |
 | Overlap support | Configurable token overlap between chunks |
 
 **Characteristics:**
@@ -141,6 +145,50 @@ const { chunks, metadata } = chunker.chunk(completedTranscription);
 | Date | 0.60 | Many false positives in clinical text |
 | Name | 0.50 | Labeled names only |
 
+### Medication Patterns (2 patterns + dose/route/frequency components)
+
+Pattern-based, no drug lexicon:
+- Name-first: `<name> <dose> <unit> [route] [frequency]`, where the name is the 1-2 word token(s) immediately before the dose. A route in the name position ("IV Furosemide 40mg") becomes the `route`.
+- Dose-first: `<dose> <unit> [of] [route] <name> [route] [frequency]`, only within 3 words after an administration verb (gave/given/received/administered/started on/took): "Gave 2 mg morphine IV".
+
+| Field | Recognized forms |
+|-------|------------------|
+| Dose | `25`, `0.4`, `1,000`, ranges `1-2` / `1 to 2` (→ `dose`, `doseMax`) |
+| Unit | mg, mcg/µg, g, mL, units/U, IU, mEq, tab(s)/tablet(s), cap(s)/capsule(s), puff(s), drop(s), patch |
+| Route | PO/by mouth → `oral`, IV/IVPB → `intravenous`, IM → `intramuscular`, SQ/SC/subcut → `subcutaneous`, SL → `sublingual`, PR → `rectal`, topical, inhaled/neb → `inhaled` |
+| Frequency | daily, BID, TID, QID, qHS, qAM, qPM, q4h, q4-6h, PRN/as needed, once, weekly, monthly, "twice daily", "every 6 hours" |
+
+| Confidence | When |
+|------------|------|
+| 0.95 | Dose + route + frequency |
+| 0.85 | Dose + route or frequency |
+| 0.70 | Dose only |
+| 0.65 | Dose-first phrasing |
+
+Not detected: lab concentrations (`mg/dL`, `mEq/L`, `mL/min`), vitals/demographics ("weight 80 kg", "pain 7/10", "age 45"), oxygen flow ("2 L nasal cannula"), alcohol ("3 units of alcohol"), names that are vital/lab keywords, pronouns/subject words ("She drinks") or stopwords.
+
+### Temporal Patterns (13 patterns, 4 types)
+
+| Type | Confidence | Examples |
+|------|------------|----------|
+| `duration` | 0.90 | "for 3 days", "x 2 weeks", "3-day history", "over the past 2 months" |
+| `onset` | 0.90 | "started 2 days ago", "began this morning", "since yesterday" |
+| `relative` | 0.80 | "yesterday", "last night", "2 weeks ago", "earlier today" |
+| `course` | 0.75 | "intermittent", "worsening", "chronic pain", "chronically", "acute onset" |
+
+Overlaps are deduplicated, preferring the longer match ("since yesterday" over "yesterday"). Bare "acute"/"chronic" are not matched because they usually belong to a diagnosis name ("chronic kidney disease"). Future scheduling ("follow up in 2 weeks") is not detected.
+
+### Severity Patterns (11 patterns, 4 levels)
+
+| Level | Confidence | Examples |
+|-------|------------|----------|
+| `critical` | 0.90 | "critical", "life-threatening", "profound" |
+| `severe` | 0.85 | "severe", "marked", "significant", "extreme", "excruciating", "worst headache of my life", "moderate-to-severe" |
+| `moderate` | 0.85 | "moderate", "mild-to-moderate" |
+| `mild` | 0.80 | "mild", "slight", "minimal", "minor" |
+
+Terms directly after a negator ("not significantly", "no significant") are skipped, as are non-severity collocations ("critical care", "critical access", "statistically/clinically significant", "significant for", "significant other", "marked with"). `modifiedText` captures the finding after the term ("severe chest pain" → "chest pain").
+
 ---
 
 ## Usage Contexts
@@ -188,7 +236,7 @@ chunks.forEach(chunk => {
 
 | Not Included | Why | Alternative |
 |--------------|-----|-------------|
-| Entity extraction (medications, diagnoses) | Requires ML models or cloud APIs | Azure Text Analytics, AWS Comprehend |
+| Lexicon-based entity extraction (drug normalization, diagnoses) | Requires ML models or cloud APIs | Azure Text Analytics, AWS Comprehend |
 | ICD-10/CPT code mapping | Requires terminology databases | Cloud APIs, custom databases |
 | Ontology linking (SNOMED, RxNorm) | Requires external services | Azure/AWS ontology APIs |
 | Model inference | Would require heavy dependencies | MedGemma, scispaCy (separate) |
@@ -208,6 +256,9 @@ MedDevKit focuses on **pattern-based preprocessing** that works offline, in the 
 │   │   ├── sections.ts        # 29 section patterns
 │   │   ├── vitals.ts          # 9 vital sign patterns
 │   │   ├── phi.ts             # 18 PHI patterns
+│   │   ├── medications.ts     # Drug + dose mentions
+│   │   ├── temporal.ts        # 13 temporal patterns
+│   │   ├── severity.ts        # 11 severity patterns
 │   │   └── index.ts           # Unified exports
 │   ├── plugins/
 │   │   ├── MedDevKitContextImpl.ts  # Context implementation
@@ -260,6 +311,9 @@ These would be **optional, Node.js-only** packages that don't compromise the bro
 | `detectSections()` | <5ms | Regex-based |
 | `detectVitals()` | <5ms | Regex-based |
 | `detectPhi()` | <10ms | Regex-based |
+| `detectMedications()` | <5ms | Regex-based |
+| `detectTemporal()` | <5ms | Regex-based |
+| `detectSeverity()` | <5ms | Regex-based |
 | `chunk()` (1K chars) | <20ms | Includes all pattern detection |
 | `chunk()` (10K chars) | <50ms | Scales linearly |
 

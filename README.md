@@ -80,6 +80,14 @@ const chunker = new MedicalChunker({
 });
 ```
 
+Each chunk after the first is prefixed with up to `overlapTokens` of the text
+that precedes it. The overlap is a contiguous slice of the normalized text that
+starts on a word boundary (a sentence or line start when one is available) and
+never inside a vital sign, medication, or PHI span. Overlap is added on top of
+`maxTokens`, so a chunk's `tokenCount` may exceed `maxTokens` by up to
+`overlapTokens`. PHI markers and all other detections in the overlap are
+reported on the chunk, and every offset is relative to `chunk.text`.
+
 ### Negation Detection
 
 Optionally detect negated medical findings:
@@ -91,6 +99,36 @@ const chunker = new MedicalChunker({
 
 // "Patient denies chest pain" -> { negatedText: "chest pain", type: "denied" }
 ```
+
+### Medication, Temporal & Severity Detection
+
+Medication mentions (drug + dose) are detected and preserved by default, so
+"Metoprolol 25 mg PO BID" is never split across chunks. Temporal expressions
+and severity modifiers are opt-in:
+
+```typescript
+const chunker = new MedicalChunker({
+  preserveMedications: true, // default
+  detectTemporal: true,
+  detectSeverity: true,
+});
+
+const { chunks } = chunker.chunk(
+  'Severe chest pain for 3 days. Started metoprolol 25 mg PO BID.'
+);
+
+chunks[0].metadata.medications;
+// [{ name: 'metoprolol', dose: 25, unit: 'mg', route: 'oral', frequency: 'BID', ... }]
+chunks[0].metadata.temporal;
+// [{ type: 'duration', raw: 'for 3 days', value: 3, unit: 'day', ... }]
+chunks[0].metadata.severity;
+// [{ level: 'severe', term: 'Severe', modifiedText: 'chest pain for 3 days', ... }]
+```
+
+The detectors are also available standalone: `detectMedications()`,
+`detectTemporal()` and `detectSeverity()`. Medication detection is
+pattern-based (no drug lexicon) and ignores vitals and lab values such as
+"weight 80 kg" or "glucose 180 mg/dL".
 
 ### Plugin System
 
@@ -167,6 +205,9 @@ interface MedicalChunkerConfig {
   preserveSections?: boolean;    // Default: true
   preserveSentences?: boolean;   // Default: true
   detectNegations?: boolean;     // Default: false
+  preserveMedications?: boolean; // Default: true (never split "Metoprolol 25 mg PO BID")
+  detectTemporal?: boolean;      // Default: false
+  detectSeverity?: boolean;      // Default: false
   customPreservePatterns?: RegExp[];
 
   // Plugin System
@@ -237,7 +278,18 @@ interface MedicalChunk {
   boundaries: ChunkBoundary;
   metadata: ChunkMetadata;
 }
+
+interface ChunkBoundary {
+  start: number;          // Core (non-overlap) range start in the normalized text
+  end: number;            // Core range end (exclusive)
+  overlapStart?: number;  // Where chunk.text begins when overlap was prepended
+  splitReason: SplitReason;
+}
 ```
+
+Offsets in `phiMarkers` and `metadata` (vitals, negations, medications,
+temporal, severity, plugin patterns) are relative to `chunk.text`, so
+`chunk.text.slice(m.startOffset, m.endOffset)` returns the matched text.
 
 ## Production Ready?
 

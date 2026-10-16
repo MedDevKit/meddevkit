@@ -45,7 +45,7 @@ export function estimateTokens(text: string): number {
   const wordEstimate = words.length;
 
   // Adjust for punctuation and special characters
-  const punctuationCount = (text.match(/[.,!?;:'"()\[\]{}]/g) || []).length;
+  const punctuationCount = (text.match(/[.,!?;:'"()[\]{}]/g) || []).length;
 
   // Adjust for numbers (often tokenized individually)
   const numberMatches = text.match(/\d+/g) || [];
