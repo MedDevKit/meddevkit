@@ -27,6 +27,7 @@ export { MedicalChunker, createChunker } from './MedicalChunker';
 export type {
   // Configuration
   MedicalChunkerConfig,
+  ChunkOptions,
   // Output types
   MedicalChunk,
   ChunkingResult,
