@@ -1,5 +1,9 @@
+import type { ReactNode } from 'react';
 import { PRESETS, type PresetKey } from '../data/sample-notes';
 import type { ChunkerConfig } from '../hooks/useChunker';
+import SegmentedControl from './SegmentedControl';
+
+export type DemoView = 'chunks' | 'compare' | 'analyzer';
 
 interface InputPanelProps {
   text: string;
@@ -8,8 +12,10 @@ interface InputPanelProps {
   onPresetChange: (key: PresetKey) => void;
   config: ChunkerConfig;
   onConfigChange: (config: ChunkerConfig) => void;
-  compareMode: boolean;
-  onCompareToggle: (v: boolean) => void;
+  view: DemoView;
+  onViewChange: (view: DemoView) => void;
+  /** Extra settings rendered between the note and the config (the Analyzer section) */
+  children?: ReactNode;
 }
 
 const presetKeys = Object.keys(PRESETS) as PresetKey[];
@@ -21,15 +27,29 @@ export default function InputPanel({
   onPresetChange,
   config,
   onConfigChange,
-  compareMode,
-  onCompareToggle,
+  view,
+  onViewChange,
+  children,
 }: InputPanelProps) {
-  const handleCompareToggle = () => {
-    const next = !compareMode;
-    onCompareToggle(next);
-  };
+  const compareMode = view === 'compare';
   return (
     <div className="flex flex-col h-full">
+      <div className="px-4 py-3 border-b border-slate-200 bg-white">
+        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+          View
+        </h2>
+        <SegmentedControl
+          label="View"
+          value={view}
+          onChange={onViewChange}
+          options={[
+            { value: 'chunks', label: 'Chunks' },
+            { value: 'compare', label: 'Compare', title: 'Compare vs a generic chunker' },
+            { value: 'analyzer', label: 'Analyzer', title: 'MedicalAnalyzer: local + Azure' },
+          ]}
+        />
+      </div>
+
       <div className="px-4 py-3 border-b border-slate-200 bg-white">
         <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Input
@@ -52,7 +72,7 @@ export default function InputPanel({
         </div>
       </div>
 
-      <div className="flex-1 p-4">
+      <div className={`flex-1 p-4 ${view === 'analyzer' ? 'min-h-[140px]' : 'min-h-[200px]'}`}>
         <textarea
           value={text}
           onChange={(e) => onTextChange(e.target.value)}
@@ -61,6 +81,8 @@ export default function InputPanel({
           spellCheck={false}
         />
       </div>
+
+      {children}
 
       <div className="px-4 py-3 border-t border-slate-200 bg-white space-y-3">
         <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Config</h2>
@@ -126,16 +148,6 @@ export default function InputPanel({
           />
         </div>
 
-        <button
-          onClick={handleCompareToggle}
-          className={`w-full mt-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-            compareMode
-              ? 'bg-gradient-to-r from-orange-500 to-emerald-500 text-white shadow-md'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
-          }`}
-        >
-          {compareMode ? 'Comparison ON' : 'Compare vs Generic'}
-        </button>
         {compareMode && config.maxTokens > 256 && (
           <p className="text-[10px] text-amber-600 mt-1">
             Tip: Try 128 tokens for a more dramatic comparison

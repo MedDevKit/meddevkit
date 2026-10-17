@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @meddevkit/chunker build && pnpm --filter @meddevkit/demo build",
+  "buildCommand": "pnpm --filter \"@meddevkit/demo...\" build",
   "outputDirectory": "demo/dist",
   "git": {
     "deploymentEnabled": {

@@ -222,6 +222,8 @@ const result = new MedicalChunker().chunk(analysis.text, { entities: analysis.en
 
 To add another provider, implement the `MedicalNlpAdapter` interface and pass it in `providers`.
 
+Try it in the [live demo](https://meddevkit.github.io/meddevkit/)'s **Analyzer** view: local detectors merged with Azure Text Analytics for health, replayed from recordings or called live with your own endpoint and key. To record the sample notes, run `pnpm build` and then `pnpm --filter @meddevkit/demo record:azure` with `AZURE_LANGUAGE_ENDPOINT` and `AZURE_LANGUAGE_KEY` set.
+
 > **Note:** PHI masking is regex-based and best-effort. It is not HIPAA de-identification; only send clinical text to a provider under an agreement (such as a BAA) that permits it.
 
 ## API Reference

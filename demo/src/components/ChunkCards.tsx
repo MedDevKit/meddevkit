@@ -1,8 +1,15 @@
-import type { ChunkingResult } from '@meddevkit/chunker';
+import type { ChunkingResult, MedicalEntity } from '@meddevkit/chunker';
+import { categoryStyle, SOURCE_BADGE, sourceKind } from '../utils/entityDisplay';
 
 interface ChunkCardsProps {
   result: ChunkingResult | null;
+  /** Show entity chips from chunk.metadata.entities (Analyzer view) */
+  showEntities?: boolean;
+  /** Omit the "Chunks" panel header (when embedded under tabs) */
+  hideHeader?: boolean;
 }
+
+const MAX_ENTITY_CHIPS = 12;
 
 const SECTION_COLORS: Record<string, string> = {
   chief_complaint: 'bg-purple-100 text-purple-700',
@@ -31,7 +38,7 @@ function formatSection(type: string): string {
     .join(' ');
 }
 
-export default function ChunkCards({ result }: ChunkCardsProps) {
+export default function ChunkCards({ result, showEntities, hideHeader }: ChunkCardsProps) {
   if (!result) {
     return (
       <div className="flex items-center justify-center h-full text-slate-400 text-sm">
@@ -42,11 +49,13 @@ export default function ChunkCards({ result }: ChunkCardsProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 py-3 border-b border-slate-200 bg-white">
-        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          Chunks
-        </h2>
-      </div>
+      {!hideHeader && (
+        <div className="px-4 py-3 border-b border-slate-200 bg-white">
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            Chunks
+          </h2>
+        </div>
+      )}
       <div className="flex-1 overflow-auto p-4 space-y-3 panel-scroll">
         {result.chunks.map((chunk, i) => {
           const section = chunk.metadata.section;
@@ -113,10 +122,43 @@ export default function ChunkCards({ result }: ChunkCardsProps) {
                   )}
                 </div>
               )}
+
+              {showEntities && (chunk.metadata.entities?.length ?? 0) > 0 && (
+                <EntityChips entities={chunk.metadata.entities ?? []} />
+              )}
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function EntityChips({ entities }: { entities: MedicalEntity[] }) {
+  const shown = entities.slice(0, MAX_ENTITY_CHIPS);
+  const hidden = entities.length - shown.length;
+  return (
+    <div className="flex flex-wrap gap-1 px-3 py-2 border-t border-slate-100">
+      {shown.map((e, i) => {
+        const style = categoryStyle(e.category);
+        return (
+          <span
+            key={i}
+            title={`${e.category} · ${e.sources.join(', ')}${e.isNegated ? ' · negated' : ''}`}
+            className={`text-[10px] font-medium px-1.5 py-0.5 rounded border max-w-[10rem] truncate ${style.bg} ${style.text} ${style.border} ${
+              e.isNegated ? 'line-through' : ''
+            }`}
+          >
+            {e.text}
+            <span className="ml-1 opacity-60 no-underline">{SOURCE_BADGE[sourceKind(e)]}</span>
+          </span>
+        );
+      })}
+      {hidden > 0 && (
+        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border bg-slate-50 text-slate-500 border-slate-200">
+          +{hidden}
+        </span>
+      )}
     </div>
   );
 }

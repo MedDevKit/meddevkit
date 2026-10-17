@@ -9,6 +9,7 @@ import {
   detectTemporal,
   detectSeverity,
   type ChunkingResult,
+  type MedicalChunkerConfig,
   type VitalSign,
   type PhiMarker,
   type ClinicalSection,
@@ -54,6 +55,21 @@ export interface ChunkerOutput {
   error: string | null;
 }
 
+/** MedicalChunker options for the demo's chunker settings */
+export function toChunkerOptions(config: ChunkerConfig): MedicalChunkerConfig {
+  return {
+    maxTokens: config.maxTokens,
+    preserveVitals: config.preserveVitals,
+    phiDetection: config.phiDetection ? 'basic' : 'none',
+    detectNegations: config.detectNegations,
+    preserveMedications: config.preserveMedications,
+    detectTemporal: config.detectTemporal,
+    detectSeverity: config.detectSeverity,
+    preserveSections: true,
+    preserveSentences: true,
+  };
+}
+
 export function useChunker(text: string, config: ChunkerConfig): ChunkerOutput {
   return useMemo(() => {
     if (!text.trim()) {
@@ -65,17 +81,7 @@ export function useChunker(text: string, config: ChunkerConfig): ChunkerOutput {
     }
 
     try {
-      const chunker = new MedicalChunker({
-        maxTokens: config.maxTokens,
-        preserveVitals: config.preserveVitals,
-        phiDetection: config.phiDetection ? 'basic' : 'none',
-        detectNegations: config.detectNegations,
-        preserveMedications: config.preserveMedications,
-        detectTemporal: config.detectTemporal,
-        detectSeverity: config.detectSeverity,
-        preserveSections: true,
-        preserveSentences: true,
-      });
+      const chunker = new MedicalChunker(toChunkerOptions(config));
 
       const result = chunker.chunk(text);
 

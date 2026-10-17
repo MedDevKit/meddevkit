@@ -6,6 +6,7 @@ on:
     paths:
       - 'demo/**'
       - 'packages/chunker/src/**'
+      - 'packages/adapter-azure/src/**'
       - '.github/workflows/deploy-demo.yml'
   workflow_dispatch:
 
@@ -33,11 +34,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Build chunker
-        run: pnpm --filter @meddevkit/chunker build
-
-      - name: Build demo
-        run: pnpm --filter @meddevkit/demo build
+      - name: Build demo and its workspace dependencies
+        run: pnpm --filter "@meddevkit/demo..." build
 
       - uses: actions/upload-pages-artifact@v3
         with:
