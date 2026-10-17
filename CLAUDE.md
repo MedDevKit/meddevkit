@@ -136,3 +136,5 @@ Published by `.github/workflows/release.yml` via npm trusted publishing (no toke
    - `packages/chunker/README.md` and `LICENSE` are copies of the root files (npm needs them in the package dir); CI fails if they differ
 2. Tag and push, e.g. `git tag chunker-v<version> && git push origin chunker-v<version>`
 3. The workflow checks the tag matches the version, runs lint/typecheck/test, builds, and publishes with provenance
+
+**New package:** npm only accepts a trusted publisher for a package that exists, so its first version is published once by a person: `scripts/first-publish.sh packages/<dir>` in their own terminal (not via `!`; the security-key approval needs a TTY). It prints the trusted-publisher settings to add. A new trusted publisher expires unless it publishes within 2 days, so tag the next version right after.
