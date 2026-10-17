@@ -30,6 +30,7 @@ function adapter(fake: FakeAzure, extra: Partial<ConstructorParameters<typeof Az
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe('package', () => {
@@ -289,7 +290,7 @@ describe('mapping', () => {
   it('reports document warnings as codes and metadata without text', async () => {
     const result = await run();
     expect(result.warnings).toEqual(['document 0: DocumentTruncated']);
-    expect(result.metadata).toEqual({ apiVersion: '2023-04-01', modelVersion: '2023-04-15', documents: 1, jobs: 1 });
+    expect(result.metadata).toEqual({ apiVersion: '2023-04-01', modelVersion: '2023-04-15', documents: 1, jobs: 1, retries: 0 });
     expect(result.processingTimeMs).toBeGreaterThanOrEqual(0);
   });
 
@@ -510,6 +511,243 @@ describe('errors never contain input text', () => {
     controller.abort();
     await failure(fake, {}, controller.signal);
     expect(fake.requests).toHaveLength(0);
+  });
+});
+
+describe('retries', () => {
+  type Step = Response | Error;
+
+  /** Serve scripted failures for the given method before falling through to the fake */
+  function flaky(fake: FakeAzure, method: 'POST' | 'GET', steps: Step[] | (() => Step)) {
+    let calls = 0;
+    const f: typeof fetch = async (input, init) => {
+      if ((init?.method ?? 'GET') === method) {
+        calls++;
+        const step = typeof steps === 'function' ? steps() : steps.shift();
+        if (step) {
+          if (init?.signal?.aborted) throw init.signal.reason;
+          if (step instanceof Error) throw step;
+          return step;
+        }
+      }
+      return fake.fetch(input, init);
+    };
+    return { fetch: f, calls: () => calls };
+  }
+
+  const status = (code: number, headers: Record<string, string> = {}, body: unknown = { error: { code: 'TooManyRequests', message: 'Rate limit exceeded.' } }) =>
+    new Response(JSON.stringify(body), { status: code, headers: { 'content-type': 'application/json', ...headers } });
+
+  async function rejection(promise: Promise<unknown>): Promise<AzureHealthError> {
+    const err = await promise.then(
+      () => undefined,
+      (e: unknown) => e
+    );
+    expect(err).toBeDefined();
+    const text = `${(err as Error).message} ${String((err as Error).stack)}`;
+    expect(text).not.toContain('chest pain');
+    return err as AzureHealthError;
+  }
+
+  it('retries a 429 submit after Retry-After, then succeeds', async () => {
+    vi.useFakeTimers();
+    const fake = new FakeAzure({ results: fixtureResults });
+    const f = flaky(fake, 'POST', [status(429, { 'retry-after': '2' })]);
+    const promise = adapter(fake, { fetch: f.fetch }).analyze(NOTE);
+
+    await vi.advanceTimersByTimeAsync(1999);
+    expect(f.calls()).toBe(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(f.calls()).toBe(2);
+    await vi.advanceTimersByTimeAsync(10);
+    const result = await promise;
+    expect(result.entities.length).toBeGreaterThan(0);
+    expect(result.metadata?.retries).toBe(1);
+    expect(fake.submissions).toHaveLength(1);
+  });
+
+  it('retries a 429 status poll using retry-after-ms / x-ms-retry-after-ms', async () => {
+    vi.useFakeTimers();
+    const fake = new FakeAzure({ results: fixtureResults, runningPolls: 0 });
+    const f = flaky(fake, 'GET', [status(429, { 'retry-after-ms': '300', 'retry-after': '20' }), status(429, { 'x-ms-retry-after-ms': '200' })]);
+    const promise = adapter(fake, { fetch: f.fetch }).analyze(NOTE);
+
+    await vi.advanceTimersByTimeAsync(1); // poll interval
+    expect(f.calls()).toBe(1);
+    await vi.advanceTimersByTimeAsync(299);
+    expect(f.calls()).toBe(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(f.calls()).toBe(2);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(f.calls()).toBe(3);
+    const result = await promise;
+    expect(result.entities.length).toBeGreaterThan(0);
+    expect(result.metadata?.retries).toBe(2);
+  });
+
+  it('backs off exponentially on 503 without Retry-After', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    const fake = new FakeAzure({ results: fixtureResults });
+    const f = flaky(fake, 'POST', [status(503, {}, {}), status(503, {}, {})]);
+    const promise = adapter(fake, { fetch: f.fetch, retryBaseDelayMs: 100 }).analyze(NOTE);
+
+    await vi.advanceTimersByTimeAsync(49);
+    expect(f.calls()).toBe(1);
+    await vi.advanceTimersByTimeAsync(1); // 0.5 * 100
+    expect(f.calls()).toBe(2);
+    await vi.advanceTimersByTimeAsync(99);
+    expect(f.calls()).toBe(2);
+    await vi.advanceTimersByTimeAsync(1); // 0.5 * 200
+    expect(f.calls()).toBe(3);
+    await vi.advanceTimersByTimeAsync(10);
+    expect((await promise).metadata?.retries).toBe(2);
+  });
+
+  it('retries 500, 502 and 504 too', async () => {
+    const fake = new FakeAzure({ results: fixtureResults });
+    const f = flaky(fake, 'GET', [status(500, {}, {}), status(502, {}, {}), status(504, {}, {})]);
+    const result = await adapter(fake, { fetch: f.fetch, retryBaseDelayMs: 1 }).analyze(NOTE);
+    expect(result.metadata?.retries).toBe(3);
+  });
+
+  it('retries a network error, then succeeds', async () => {
+    const fake = new FakeAzure({ results: fixtureResults });
+    const f = flaky(fake, 'POST', [new TypeError('fetch failed')]);
+    const result = await adapter(fake, { fetch: f.fetch, retryBaseDelayMs: 1 }).analyze(NOTE);
+    expect(result.entities.length).toBeGreaterThan(0);
+    expect(result.metadata?.retries).toBe(1);
+    expect(f.calls()).toBe(2);
+  });
+
+  it('throws with status 429 and the attempt count when retries are exhausted', async () => {
+    const fake = new FakeAzure();
+    const f = flaky(fake, 'POST', () => status(429, { 'retry-after': '0' }));
+    const err = await rejection(adapter(fake, { fetch: f.fetch }).analyze(NOTE));
+    expect(err).toBeInstanceOf(AzureHealthError);
+    expect(err.status).toBe(429);
+    expect(err.code).toBe('TooManyRequests');
+    expect(err.message).toBe(
+      'Azure health submit request was rate limited (HTTP 429) after 5 attempts: TooManyRequests: Rate limit exceeded.'
+    );
+    expect(f.calls()).toBe(5);
+    expect(fake.polls).toHaveLength(0);
+  });
+
+  it('throws a NetworkError after repeated network failures', async () => {
+    const fake = new FakeAzure();
+    const cause = new TypeError('fetch failed');
+    const f = flaky(fake, 'POST', () => cause);
+    const err = await rejection(adapter(fake, { fetch: f.fetch, maxRetries: 2, retryBaseDelayMs: 1 }).analyze(NOTE));
+    expect(err.message).toBe('Azure health submit request failed with a network error after 3 attempts');
+    expect(err.code).toBe('NetworkError');
+    expect(err.status).toBeUndefined();
+    expect(err.cause).toBe(cause);
+    expect(f.calls()).toBe(3);
+  });
+
+  it('does not retry 401, 400 or 404', async () => {
+    for (const code of [401, 400, 404]) {
+      const fake = new FakeAzure();
+      const f = flaky(fake, 'POST', () => status(code, {}, { error: { code: String(code), message: 'No.' } }));
+      const err = await rejection(adapter(fake, { fetch: f.fetch, retryBaseDelayMs: 1 }).analyze(NOTE));
+      expect(err.status).toBe(code);
+      expect(err.message).toBe(`Azure health submit request failed with HTTP ${code}: ${code}: No.`);
+      expect(f.calls()).toBe(1);
+    }
+  });
+
+  it('does not retry a caller abort raised by fetch', async () => {
+    const fake = new FakeAzure();
+    const controller = new AbortController();
+    const f: typeof fetch = async () => {
+      controller.abort(new Error('caller aborted'));
+      throw controller.signal.reason;
+    };
+    const spy = vi.fn(f);
+    const err = await rejection(adapter(fake, { fetch: spy as typeof fetch }).analyze(NOTE, { signal: controller.signal }));
+    expect(err.message).toBe('caller aborted');
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects promptly when aborted during a retry wait', async () => {
+    const fake = new FakeAzure();
+    const f = flaky(fake, 'POST', () => status(429, { 'retry-after': '10' }));
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(new Error('caller aborted')), 20);
+    const started = Date.now();
+    const err = await rejection(adapter(fake, { fetch: f.fetch }).analyze(NOTE, { signal: controller.signal }));
+    expect(err.message).toBe('caller aborted');
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect(f.calls()).toBe(1);
+  });
+
+  it('maxRetries 0 disables retries', async () => {
+    const fake = new FakeAzure();
+    const f = flaky(fake, 'POST', () => status(503, {}, {}));
+    const err = await rejection(adapter(fake, { fetch: f.fetch, maxRetries: 0 }).analyze(NOTE));
+    expect(err.status).toBe(503);
+    expect(err.message).toBe('Azure health submit request failed with HTTP 503');
+    expect(f.calls()).toBe(1);
+  });
+
+  it('poll retries never wait past maxPollMs', async () => {
+    const fake = new FakeAzure();
+    const f = flaky(fake, 'GET', () => status(503, { 'retry-after': '10' }, {}));
+    const started = Date.now();
+    const err = await rejection(adapter(fake, { fetch: f.fetch, maxPollMs: 200 }).analyze(NOTE));
+    expect(err.code).toBe('PollTimeout');
+    expect(err.message).toBe('Azure health job did not finish within 200 ms');
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect(f.calls()).toBe(1);
+  });
+
+  it('poll retries with short delays still stop at maxPollMs', async () => {
+    vi.useFakeTimers();
+    const fake = new FakeAzure();
+    const f = flaky(fake, 'GET', () => status(503, { 'retry-after-ms': '40' }, {}));
+    const promise = rejection(adapter(fake, { fetch: f.fetch, maxPollMs: 100, maxRetries: 100 }).analyze(NOTE));
+    await vi.advanceTimersByTimeAsync(200);
+    const err = await promise;
+    expect(err.code).toBe('PollTimeout');
+    // poll at 1 ms, retries at 41 and 81; a retry at 121 would pass the deadline
+    expect(f.calls()).toBe(3);
+  });
+
+  it('caps jittered backoff and server delays at maxRetryDelayMs', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0.9999);
+    const fake = new FakeAzure({ results: fixtureResults });
+    const f = flaky(fake, 'POST', [status(503, {}, {}), status(503, {}, {}), status(429, { 'retry-after': '120' })]);
+    const promise = adapter(fake, { fetch: f.fetch, retryBaseDelayMs: 1000, maxRetryDelayMs: 1500 }).analyze(NOTE);
+
+    await vi.advanceTimersByTimeAsync(999); // floor(0.9999 * 1000)
+    expect(f.calls()).toBe(2);
+    await vi.advanceTimersByTimeAsync(1498);
+    expect(f.calls()).toBe(2);
+    await vi.advanceTimersByTimeAsync(1); // min(2000, 1500) * 0.9999
+    expect(f.calls()).toBe(3);
+    await vi.advanceTimersByTimeAsync(1500); // Retry-After 120 s capped at 1.5 s
+    expect(f.calls()).toBe(4);
+    await vi.advanceTimersByTimeAsync(10);
+    expect((await promise).metadata?.retries).toBe(3);
+  });
+
+  it('gets a fresh token for every attempt', async () => {
+    const fake = new FakeAzure({ results: fixtureResults });
+    const f = flaky(fake, 'POST', [status(503, {}, {})]);
+    let n = 0;
+    const getToken = vi.fn(async () => `token-${++n}`);
+    const result = await new AzureHealthAdapter({
+      endpoint: ENDPOINT,
+      getToken,
+      pollIntervalMs: 1,
+      retryBaseDelayMs: 1,
+      fetch: f.fetch,
+    }).analyze(NOTE);
+    expect(result.metadata?.retries).toBe(1);
+    expect(getToken).toHaveBeenCalledTimes(f.calls() + fake.polls.length);
+    expect(fake.requests[0].headers.authorization).toBe('Bearer token-2');
   });
 });
 

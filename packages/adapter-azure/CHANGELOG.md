@@ -18,3 +18,10 @@
   shifts offsets back onto the original text.
 - Polls with Retry-After support, a polling deadline and abort-signal
   support. Errors and warnings never include the analyzed text.
+- Retries the job submit and each status poll after HTTP 429, 500, 502, 503,
+  504 or a network error, honoring `retry-after-ms`, `x-ms-retry-after-ms`
+  and `Retry-After`, else exponential backoff with full jitter. Configurable
+  with `maxRetries` (default 4, `0` disables), `retryBaseDelayMs` (default
+  1000) and `maxRetryDelayMs` (default 30000); abort-aware and bounded by
+  `maxPollMs` while polling. Other 4xx responses are not retried. The retry
+  count is reported in `metadata.retries`.
