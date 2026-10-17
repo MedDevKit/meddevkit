@@ -148,3 +148,46 @@ export {
 } from './plugins';
 
 export type { PluginWarning } from './plugins';
+
+// Clinical NLP adapters (provider-neutral entity model, PHI protection,
+// local adapter, analyzer)
+export {
+  MedicalAnalyzer,
+  LocalAdapter,
+  extractLocalEntities,
+  LOCAL_ADAPTER_NAME,
+  LOCAL_ADAPTER_VERSION,
+  MaskingPhiProtector,
+  phiMarkersToSpans,
+  normalizePhiSpans,
+  buildMask,
+  mergeEntities,
+  remapRelations,
+  resolveNegation,
+  providerNegationOf,
+} from './adapters';
+
+export type {
+  EntityCategory,
+  EntityAssertion,
+  OntologyCode,
+  MedicalEntity,
+  EntityRelation,
+  AdapterCapabilities,
+  AnalyzeOptions,
+  AdapterResult,
+  CostEstimate,
+  MedicalNlpAdapter,
+  NegationPolicy,
+  MedicalAnalyzerConfig,
+  ProviderStatus,
+  ProviderOutcome,
+  MedicalAnalysisMetadata,
+  MedicalAnalysisResult,
+  PhiSpan,
+  ProtectedText,
+  PhiProtector,
+  PhiPolicy,
+  MergeInput,
+  MergeOutput,
+} from './adapters';
