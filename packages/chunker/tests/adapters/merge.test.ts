@@ -316,6 +316,58 @@ describe('mergeEntities', () => {
     });
   });
 
+  describe('negation cue inside the entity', () => {
+    it('does not negate a provider entity that contains the cue ("no acute distress")', () => {
+      const text = 'Patient appears in no acute distress.';
+      const start = text.indexOf('no acute distress');
+      const { entities, negationDisagreements } = run({
+        negations: [neg(start, start + 'no acute distress'.length)],
+        provider: [prov({ category: 'SymptomOrSign', startOffset: start, endOffset: start + 17 })],
+      });
+      expect(entities[0].isNegated).toBe(false);
+      expect(entities[0].negation).toEqual({ local: false, provider: false, agreement: true });
+      expect(negationDisagreements).toBe(0);
+    });
+
+    it('keeps plain overlap for purely local entities that contain the cue', () => {
+      const { entities, negationDisagreements } = run({
+        negations: [neg(0, 20)],
+        local: [local({ category: 'MedicationName', startOffset: 0, endOffset: 15 })],
+      });
+      expect(entities[0].isNegated).toBe(true);
+      expect(entities[0].negation).toEqual({ local: true, agreement: true });
+      expect(negationDisagreements).toBe(0);
+    });
+
+    it('still negates an entity after the cue ("No shortness of breath")', () => {
+      const text = 'No shortness of breath';
+      const start = text.indexOf('shortness of breath');
+      const { entities, negationDisagreements } = run({
+        negations: [neg(0, text.length)],
+        provider: [
+          prov({ category: 'SymptomOrSign', startOffset: start, endOffset: text.length, assertion: { certainty: 'negative' } }),
+        ],
+      });
+      expect(entities[0].isNegated).toBe(true);
+      expect(entities[0].negation).toEqual({ local: true, provider: true, agreement: true });
+      expect(negationDisagreements).toBe(0);
+    });
+
+    it('counts a disagreement when the provider says positive after a cue ("Denies chest pain")', () => {
+      const text = 'Denies chest pain';
+      const start = text.indexOf('chest pain');
+      const { entities, negationDisagreements } = run({
+        negations: [neg(0, text.length)],
+        provider: [
+          prov({ category: 'SymptomOrSign', startOffset: start, endOffset: text.length, assertion: { certainty: 'positive' } }),
+        ],
+      });
+      expect(entities[0].isNegated).toBe(true);
+      expect(entities[0].negation).toEqual({ local: true, provider: false, agreement: false });
+      expect(negationDisagreements).toBe(1);
+    });
+  });
+
   describe('sections and ordering', () => {
     it('assigns sections to every entity and sorts by start then end', () => {
       const sections: ClinicalSection[] = [

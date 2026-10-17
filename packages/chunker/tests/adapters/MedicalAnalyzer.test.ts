@@ -220,6 +220,20 @@ describe('MedicalAnalyzer', () => {
       expect(providerPolicy.entities.find((e) => e.text === 'chest pain')!.isNegated).toBe(false);
     });
 
+    it('does not negate a provider finding that contains the cue ("no acute distress")', async () => {
+      const note = 'Physical Exam: Patient appears in no acute distress.';
+      const provider = new FakeProvider('fake', async (text) => ({
+        entities: [entityFor(text, 'no acute distress', 'SymptomOrSign')],
+        processingTimeMs: 1,
+      }));
+      const result = await new MedicalAnalyzer({ providers: [provider], phiPolicy: 'send' }).analyze(note);
+      const finding = result.entities.find((e) => e.text === 'no acute distress')!;
+      expect(finding).toBeDefined();
+      expect(finding.isNegated).toBe(false);
+      expect(finding.negation).toEqual({ local: false, provider: false, agreement: true });
+      expect(result.metadata.negationDisagreements).toBe(0);
+    });
+
     it('drops provider entities with invalid offsets and reports warnings', async () => {
       const provider = new FakeProvider('fake', async (text) => ({
         entities: [

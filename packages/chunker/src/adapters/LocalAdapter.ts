@@ -47,16 +47,34 @@ export function rangesOverlap(
 }
 
 /**
- * Whether `[start, end)` overlaps any local negation span.
+ * Whether a local negation applies to the entity at `[start, end)`.
+ *
+ * By default this is plain overlap: any local negation span that overlaps
+ * the entity applies. Local entities come from pattern spans, not
+ * concepts, so a negation overlapping them always applies.
+ *
+ * With `ignoreCueInside`, a span is ignored when the entity contains the
+ * negation cue start (`start <= n.startOffset < end`). Local negation
+ * spans start at the cue ("no", "denies", ...), and a provider's concept
+ * may already include it: in "Patient appears in no acute distress." the
+ * local span is "no acute distress", and a provider entity "no acute
+ * distress" (a positive finding) must not be negated again, which would
+ * flip its meaning. In "No shortness of breath" the provider entity
+ * "shortness of breath" starts after the cue, so the negation applies.
+ * Use it for entities that carry provider data.
+ *
  * @internal
  */
 export function overlapsNegation(
   start: number,
   end: number,
-  negations: NegationContext[]
+  negations: NegationContext[],
+  options: { ignoreCueInside?: boolean } = {}
 ): boolean {
-  return negations.some((n) =>
-    rangesOverlap(start, end, n.startOffset, n.endOffset)
+  return negations.some(
+    (n) =>
+      rangesOverlap(start, end, n.startOffset, n.endOffset) &&
+      !(options.ignoreCueInside && start <= n.startOffset && n.startOffset < end)
   );
 }
 

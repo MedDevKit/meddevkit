@@ -1,5 +1,15 @@
 # @meddevkit/chunker
 
+## 0.3.1
+
+### Patch Changes
+
+- Local negation no longer applies to a provider entity that contains the
+  negation cue (e.g. Azure's "no acute distress" finding), which
+  double-negated it.
+- Medication names no longer include a leading negation word (e.g.
+  'No metoprolol' → 'metoprolol').
+
 ## 0.3.0
 
 ### Minor Changes

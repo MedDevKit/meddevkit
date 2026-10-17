@@ -177,11 +177,22 @@ export const MEDICATION_CONFIDENCE = {
 } as const;
 
 /**
+ * Negation cues (see `negation.ts`) that can directly precede a drug name:
+ * "No metoprolol 25 mg", "denies aspirin 81 mg", "holding lisinopril 10 mg".
+ * As leading tokens they are dropped from the name so the medication span
+ * starts at the drug itself; the negation span still overlaps it.
+ * ("stop", "stopped", "hold", "discontinue(d)" are listed with the
+ * medication-management verbs below.) Compared case-insensitively.
+ */
+const NEGATION_CUE_TOKENS = ['no', 'not', 'denies', 'denied', 'without', 'holding', 'never'];
+
+/**
  * Tokens that can never be (part of) a medication name: vital-sign and lab
- * keywords plus common verbs/stopwords that precede a dose.
+ * keywords, negation cues, plus common verbs/stopwords that precede a dose.
  * Compared case-insensitively.
  */
 const EXCLUDED_NAME_TOKENS = new Set([
+  ...NEGATION_CUE_TOKENS,
   // Vital sign / measurement keywords
   'bp', 'hr', 'rr', 'temp', 'temperature', 'pulse', 'weight', 'wt', 'weighs',
   'height', 'ht', 'bmi', 'pain', 'sat', 'sats', 'spo2', 'o2', 'oxygen', 'age',

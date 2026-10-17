@@ -3,7 +3,9 @@ import {
   LocalAdapter,
   extractLocalEntities,
   LOCAL_ADAPTER_NAME,
+  overlapsNegation,
 } from '../../src/adapters/LocalAdapter';
+import type { NegationContext } from '../../src/types';
 
 const adapter = new LocalAdapter();
 
@@ -167,6 +169,44 @@ describe('LocalAdapter', () => {
       });
       expect(entities[0].section).toBe('plan');
       expect(entities[0].isNegated).toBe(true);
+    });
+  });
+
+  describe('overlapsNegation', () => {
+    // "Patient appears in no acute distress." -> span [19,36) "no acute distress"
+    const span: NegationContext[] = [
+      { negatedText: 'acute distress', type: 'absent', startOffset: 19, endOffset: 36, confidence: 0.85 },
+    ];
+    const cueAware = { ignoreCueInside: true };
+
+    it('plain overlap (default) applies whenever the spans overlap', () => {
+      expect(overlapsNegation(19, 36, span)).toBe(true);
+      expect(overlapsNegation(10, 36, span)).toBe(true);
+      expect(overlapsNegation(22, 36, span)).toBe(true);
+    });
+
+    it('ignoreCueInside ignores a negation whose cue lies inside the entity', () => {
+      expect(overlapsNegation(19, 36, span, cueAware)).toBe(false); // "no acute distress"
+      expect(overlapsNegation(10, 36, span, cueAware)).toBe(false); // entity starts before the cue
+    });
+
+    it('ignoreCueInside ignores the negation when the entity starts exactly at the cue start', () => {
+      expect(overlapsNegation(19, 21, span, cueAware)).toBe(false);
+    });
+
+    it('ignoreCueInside applies the negation when the entity starts one char after the cue start', () => {
+      expect(overlapsNegation(20, 36, span, cueAware)).toBe(true);
+    });
+
+    it('ignoreCueInside applies the negation when the cue is outside the entity', () => {
+      expect(overlapsNegation(22, 36, span, cueAware)).toBe(true); // "acute distress"
+    });
+
+    it('does not apply a negation that does not overlap, in either mode', () => {
+      expect(overlapsNegation(0, 19, span)).toBe(false);
+      expect(overlapsNegation(36, 40, span)).toBe(false);
+      expect(overlapsNegation(0, 19, span, cueAware)).toBe(false);
+      expect(overlapsNegation(36, 40, span, cueAware)).toBe(false);
     });
   });
 });

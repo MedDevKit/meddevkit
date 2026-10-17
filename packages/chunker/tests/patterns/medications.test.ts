@@ -261,6 +261,38 @@ describe('Medication Detection', () => {
     });
   });
 
+  describe('Leading negation cue', () => {
+    it.each([
+      ['No metoprolol 25 mg PO BID.', 'metoprolol'],
+      ['not metoprolol 25 mg PO BID', 'metoprolol'],
+      ['Denies aspirin 81 mg daily', 'aspirin'],
+      ['denied aspirin 81 mg daily', 'aspirin'],
+      ['without aspirin 81 mg daily', 'aspirin'],
+      ['Holding lisinopril 10 mg daily', 'lisinopril'],
+      ['hold lisinopril 10 mg daily', 'lisinopril'],
+      ['Stopped lisinopril 10 mg daily', 'lisinopril'],
+      ['discontinue lisinopril 10 mg daily', 'lisinopril'],
+    ])('strips the cue from the name and span: %s', (text, name) => {
+      const [med] = detectMedications(text);
+      expect(med.name).toBe(name);
+      expect(text.slice(med.startOffset, med.endOffset).startsWith(name)).toBe(true);
+      expect(med.raw.startsWith(name)).toBe(true);
+    });
+
+    it('keeps a real two-word drug name: "insulin glargine 10 units"', () => {
+      const text = 'insulin glargine 10 units qHS';
+      const [med] = detectMedications(text);
+      expect(med.name).toBe('insulin glargine');
+      expect(med.startOffset).toBe(0);
+    });
+
+    it('keeps a name that only starts with cue letters: "Nortriptyline 25 mg"', () => {
+      const [med] = detectMedications('Nortriptyline 25 mg PO nightly');
+      expect(med.name).toBe('Nortriptyline');
+      expect(med.startOffset).toBe(0);
+    });
+  });
+
   describe('Dose-first phrasing', () => {
     it.each([
       ['Gave 2 mg morphine IV', '2 mg morphine IV', 'morphine', 2, 'mg', 'intravenous'],

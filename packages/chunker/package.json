@@ -1,6 +1,6 @@
 {
   "name": "@meddevkit/chunker",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "PHI-aware medical text chunker for RAG applications",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
