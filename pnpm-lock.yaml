@@ -52,6 +52,33 @@ importers:
         specifier: ^6.0.0
         version: 6.4.1
 
+  packages/adapter-azure:
+    devDependencies:
+      '@meddevkit/chunker':
+        specifier: workspace:^
+        version: link:../chunker
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.27
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^6.0.0
+        version: 6.21.0(@typescript-eslint/parser@6.21.0)(eslint@8.57.1)(typescript@5.9.3)
+      '@typescript-eslint/parser':
+        specifier: ^6.0.0
+        version: 6.21.0(eslint@8.57.1)(typescript@5.9.3)
+      eslint:
+        specifier: ^8.56.0
+        version: 8.57.1
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(typescript@5.9.3)
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.2.0
+        version: 1.6.1(@types/node@20.19.27)
+
   packages/chunker:
     devDependencies:
       '@types/node':
