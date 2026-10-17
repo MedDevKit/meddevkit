@@ -1,5 +1,25 @@
 # @meddevkit/chunker
 
+## 0.3.0
+
+### Minor Changes
+
+- Add a provider-neutral adapter layer: the `MedicalNlpAdapter` interface and
+  the `MedicalEntity` shape, plus `LocalAdapter` (the built-in detectors as an
+  adapter that never sends text off the machine).
+- Add `MedicalAnalyzer`: runs local detection, applies a PHI policy (default
+  `'mask'`), calls the first available provider in order (with a timeout),
+  and merges provider and local results. Negation policy defaults to
+  `'either'`. If every provider fails, it falls back to a degraded local-only
+  result and reports why in `metadata.providers`.
+- Add the `PhiProtector` interface and `MaskingPhiProtector`, which masks PHI
+  with same-length replacements so offsets stay valid.
+- `chunk(text, { entities })`: entities up to 100 characters are protected
+  from splitting and attached to chunk metadata with chunk-relative offsets.
+  `ProtectedRange` gains the reason `'entity'`.
+- Note: the built-in PHI masking is regex-based and best-effort. It is not
+  HIPAA de-identification.
+
 ## 0.2.1
 
 ### Patch Changes

@@ -18,9 +18,11 @@ MedDevKit/
 │       │   │   ├── sections.ts   # CC, HPI, PE, Assessment
 │       │   │   ├── phi.ts        # PHI detection
 │       │   │   └── negation.ts   # Negation detection
+│       │   ├── adapters/         # MedicalNlpAdapter, LocalAdapter, MedicalAnalyzer, PHI protection
 │       │   ├── tokenizer/        # Token estimation
 │       │   └── utils/            # Boundary, normalize utilities
 │       └── tests/
+│   └── adapter-azure/            # @meddevkit/adapter-azure (Azure Text Analytics for health)
 ├── package.json                  # Root monorepo config
 ├── pnpm-workspace.yaml
 └── tsconfig.base.json
@@ -127,9 +129,10 @@ feat(chunker): Add respiratory rate pattern detection
 
 ## Package Publishing
 
-Published by `.github/workflows/release.yml` via npm trusted publishing (no token/OTP; never publish locally):
+Published by `.github/workflows/release.yml` via npm trusted publishing (no token/OTP; never publish locally). Each package releases on its own tag:
+`chunker-v<version>` for @meddevkit/chunker, `adapter-azure-v<version>` for @meddevkit/adapter-azure.
 
-1. Bump `version` in `packages/chunker/package.json` and add a `CHANGELOG.md` entry; merge to main via PR
+1. Bump `version` in the package's `package.json` and add a `CHANGELOG.md` entry; merge to main via PR
    - `packages/chunker/README.md` and `LICENSE` are copies of the root files (npm needs them in the package dir); CI fails if they differ
-2. Tag and push: `git tag chunker-v<version> && git push origin chunker-v<version>`
+2. Tag and push, e.g. `git tag chunker-v<version> && git push origin chunker-v<version>`
 3. The workflow checks the tag matches the version, runs lint/typecheck/test, builds, and publishes with provenance
