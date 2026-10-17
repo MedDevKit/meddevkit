@@ -41,7 +41,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MedDevKit/meddevkit.git",
+    "url": "git+https://github.com/MedDevKit/meddevkit.git",
     "directory": "packages/chunker"
   },
   "homepage": "https://meddevkit.github.io/meddevkit/",

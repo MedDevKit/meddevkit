@@ -1,5 +1,13 @@
 # @meddevkit/adapter-azure
 
+## 0.1.1
+
+### Patch Changes
+
+- First release published from GitHub Actions via npm trusted publishing,
+  with provenance.
+- Fix the `repository.url` format that npm auto-corrected on publish.
+
 ## 0.1.0
 
 ### Minor Changes
