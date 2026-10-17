@@ -14,7 +14,21 @@ import type { ProtectedRange, SplitPoint } from '../types';
 // ============================================================================
 
 /**
+ * Minimum distance (in characters) from the chunk start that a split moved
+ * before a protected range must keep. Closer than this, the split moves past
+ * the range instead, so a protected range never produces a near-empty chunk.
+ */
+const MIN_SPLIT_BEFORE_RANGE = 50;
+
+/**
  * Find the best split point in text
+ *
+ * The returned position is never strictly inside a protected range,
+ * whichever branch (protected range at the ideal end, sentence, paragraph
+ * or word fallback) produced it. A position that would fall inside one is
+ * moved to the range start when that leaves more than
+ * MIN_SPLIT_BEFORE_RANGE characters after `startPosition`, and otherwise
+ * to the range end (so the chunk may exceed `idealEnd`).
  *
  * @param text - Full text
  * @param startPosition - Start of the range to consider
@@ -30,6 +44,33 @@ export function findBestSplitPoint(
   protectedRanges: ProtectedRange[],
   preserveSentences: boolean = true
 ): SplitPoint {
+  const candidate = findCandidateSplitPoint(
+    text,
+    startPosition,
+    idealEnd,
+    protectedRanges,
+    preserveSentences
+  );
+  return moveOutOfProtectedRanges(
+    text,
+    startPosition,
+    candidate,
+    protectedRanges
+  );
+}
+
+/**
+ * Pick a split point by preference (protected range at the ideal end,
+ * sentence, paragraph, word). The result may still fall inside a protected
+ * range; findBestSplitPoint corrects that.
+ */
+function findCandidateSplitPoint(
+  text: string,
+  startPosition: number,
+  idealEnd: number,
+  protectedRanges: ProtectedRange[],
+  preserveSentences: boolean
+): SplitPoint {
   // Ensure we don't go past text end
   const maxEnd = Math.min(idealEnd, text.length);
 
@@ -40,7 +81,7 @@ export function findBestSplitPoint(
 
   if (overlappingRange) {
     // Split before the protected range if possible
-    if (overlappingRange.start > startPosition + 50) {
+    if (overlappingRange.start > startPosition + MIN_SPLIT_BEFORE_RANGE) {
       return {
         position: overlappingRange.start,
         reason: 'max_tokens',
@@ -87,6 +128,47 @@ export function findBestSplitPoint(
     position: wordBoundary,
     reason: 'max_tokens',
   };
+}
+
+/**
+ * Move a split point out of any protected range it falls strictly inside
+ *
+ * Ranges need not be merged: the walk repeats until the position is clear.
+ * It first walks back to range starts; if that ends at or before
+ * `startPosition + MIN_SPLIT_BEFORE_RANGE`, it walks forward from the
+ * original position to range ends instead (capped at the text length).
+ * A moved split is reported as 'max_tokens'.
+ */
+function moveOutOfProtectedRanges(
+  text: string,
+  startPosition: number,
+  split: SplitPoint,
+  protectedRanges: ProtectedRange[]
+): SplitPoint {
+  const containing = (pos: number): ProtectedRange | undefined =>
+    protectedRanges.find((r) => pos > r.start && pos < r.end);
+
+  if (!containing(split.position)) return split;
+
+  // Walk back to the start of each containing range
+  let back = split.position;
+  for (let r = containing(back); r; r = containing(back)) {
+    back = r.start;
+  }
+  if (back > startPosition + MIN_SPLIT_BEFORE_RANGE) {
+    return { position: back, reason: 'max_tokens' };
+  }
+
+  // Too close to the chunk start: walk forward past each containing range
+  let forward = split.position;
+  for (
+    let r = containing(forward);
+    r && forward < text.length;
+    r = containing(forward)
+  ) {
+    forward = Math.min(r.end, text.length);
+  }
+  return { position: forward, reason: 'max_tokens' };
 }
 
 /**

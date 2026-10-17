@@ -1,5 +1,39 @@
 # @meddevkit/chunker
 
+## 0.3.2
+
+### Patch Changes
+
+Fixes found by running the detectors over public clinical notes (MTSamples,
+ACI-Bench, Asclepius) and comparing results before and after.
+
+- Chunking no longer drops text. A range below `minTokens` used to be
+  skipped while the position still advanced, which could lose whole
+  sections; it is now extended into the following text, or emitted as an
+  undersized chunk when no merge fits within `maxTokens`.
+- A split point can no longer land inside a protected range (e.g. a vital
+  sign) when the chunker falls back to a word boundary.
+- Sections: keywords must end cleanly, so "She…"/"Shortness of breath" are
+  no longer social history and "Penicillin" is no longer a physical exam
+  header. Added common variants (pre/postoperative, discharge and final
+  diagnoses, plurals such as PLANS and ASSESSMENTS, SOCIAL HABITS).
+- Vitals: spinal levels (T11) and "Troponin T" are no longer temperatures;
+  temperatures must be in a plausible range. Oxygen flow (L/min) is no
+  longer SpO2. Added pulse oximetry, SaO2, pulse rate, respirations, `=`
+  separators, value-first saturation and filler words ("blood pressure was
+  noted to be 180/95"). Spans now keep a trailing `%` or unit. The exported
+  `VITAL_PATTERNS.temperature` puts a bare `T` value in group 2.
+- PHI: "dobutamine" is no longer a date of birth, and lowercase prose is no
+  longer flagged as a name or address; all-caps names and addresses are
+  still flagged.
+- Negation: "normal X" is no longer a negation. Plan forms ("rule out MI",
+  "cannot exclude") are no longer negated. Added "not"/"never" for findings,
+  "None" field values, postfix "absent", "nor" and "negative X" in review of
+  systems; lists ("no cyanosis, clubbing or edema") are negated as a whole
+  and clause boundaries ("but") end the scope. Spans no longer end mid-word.
+- Tests: four ACI-Bench notes (CC BY 4.0, role-played encounters) added as
+  integration fixtures; they are not published to npm.
+
 ## 0.3.1
 
 ### Patch Changes

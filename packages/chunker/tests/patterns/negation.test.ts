@@ -99,22 +99,35 @@ describe('Negation Detection', () => {
     });
   });
 
-  describe('Ruled Out Type - "rule out X", "r/o"', () => {
-    it('should detect "rule out MI"', () => {
-      const text = 'Need to rule out MI given presentation.';
-      const negations = detectNegations(text);
+  describe('Ruled Out Type - completed "ruled out X"', () => {
+    it('should not negate "need to rule out MI" (plan form: MI is still under consideration)', () => {
+      expect(detectNegations('Need to rule out MI given presentation.')).toHaveLength(0);
+    });
+
+    it.each([
+      'Rule out PE.',
+      'R/O sepsis.',
+      'Need to r/o pulmonary embolism given symptoms.',
+      'Plan to rule out MI with serial troponins.',
+      'Will rule out pneumonia with chest x-ray.',
+    ])('should not negate the plan form (still under consideration): %s', (text) => {
+      expect(detectNegations(text)).toHaveLength(0);
+    });
+
+    it('should detect "MI was ruled out"', () => {
+      const negations = detectNegations('MI was ruled out.');
 
       expect(negations).toHaveLength(1);
       expect(negations[0].type).toBe('ruled_out');
-      expect(negations[0].negatedText).toContain('MI');
+      expect(negations[0].negatedText).toBe('MI');
     });
 
-    it('should detect "r/o" abbreviation', () => {
-      const text = 'Need to r/o pulmonary embolism given symptoms.';
-      const negations = detectNegations(text);
+    it('should detect "Ruled out for PE"', () => {
+      const negations = detectNegations('Ruled out for PE.');
 
-      expect(negations.length).toBeGreaterThanOrEqual(1);
+      expect(negations).toHaveLength(1);
       expect(negations[0].type).toBe('ruled_out');
+      expect(negations[0].negatedText).toBe('PE');
     });
 
     it('should detect "ruled out" past tense', () => {
@@ -176,12 +189,9 @@ describe('Negation Detection', () => {
       expect(negations[0].type).toBe('negative');
     });
 
-    it('should detect "normal"', () => {
-      const text = 'Normal neurological examination.';
-      const negations = detectNegations(text);
-
-      expect(negations).toHaveLength(1);
-      expect(negations[0].type).toBe('negative');
+    it('should not treat "normal" as a negation cue', () => {
+      // "normal X" asserts a normal finding; it does not negate one
+      expect(detectNegations('Normal neurological examination.')).toHaveLength(0);
     });
   });
 
@@ -420,7 +430,7 @@ Abdomen: Soft, non-tender, no masses.`;
 
   describe('Line breaks', () => {
     it('should not extend a ruled-out span into the next list item', () => {
-      const text = '1. Chest pain - rule out acute coronary syndrome\n2. Headache';
+      const text = '1. Chest pain - ruled out acute coronary syndrome\n2. Headache';
       const negations = detectNegations(text);
 
       expect(negations).toHaveLength(1);
@@ -449,6 +459,378 @@ Abdomen: Soft, non-tender, no masses.`;
       ]);
       negations.forEach((n) => {
         expect(text.slice(n.startOffset, n.endOffset)).not.toContain('\n');
+      });
+    });
+  });
+
+  describe('Real-note precision', () => {
+    const terms = (text: string) => detectNegations(text).map((n) => n.negatedText);
+    const span = (text: string, n: { startOffset: number; endOffset: number }) =>
+      text.slice(n.startOffset, n.endOffset);
+
+    describe('"normal" is not a negation cue', () => {
+      it.each([
+        'Bolus of 1 L normal saline given.',
+        'Transferred to the normal ward.',
+        'Electrolytes within normal range.',
+      ])('ignores %s', (text) => {
+        expect(detectNegations(text)).toHaveLength(0);
+      });
+    });
+
+    describe('pseudo-negations ("could not exclude") keep the finding possible', () => {
+      it.each([
+        'CT could not exclude the presence of an advanced malignant lesion.',
+        'We cannot exclude pulmonary embolism.',
+        'Could not rule out pneumonia on this film.',
+        "Exam can't rule out appendicitis.",
+        'Unable to rule out sepsis at this time.',
+        'Malignancy is not excluded.',
+        'Pulmonary embolism has not been ruled out.',
+        'Strep test was not negative.',
+      ])('does not negate: %s', (text) => {
+        expect(detectNegations(text)).toHaveLength(0);
+      });
+
+      it('still detects a plain exclusion', () => {
+        const negations = detectNegations('Stroke was excluded based on imaging.');
+        expect(negations).toHaveLength(1);
+        expect(negations[0].type).toBe('ruled_out');
+        expect(negations[0].negatedText).toBe('Stroke');
+      });
+    });
+
+    describe('"negative" needs a finding', () => {
+      it('ignores "negative pressure wound therapy"', () => {
+        expect(detectNegations('Started negative pressure wound therapy.')).toHaveLength(0);
+      });
+
+      it('ignores "gram negative rods"', () => {
+        expect(detectNegations('Culture grew gram negative rods.')).toHaveLength(0);
+      });
+
+      it('negates the finding after "negative for", not the test before it', () => {
+        const negations = detectNegations('Biopsy negative for malignancy.');
+        expect(negations).toHaveLength(1);
+        expect(negations[0].negatedText).toBe('malignancy');
+      });
+
+      it('detects "Test: negative"', () => {
+        const negations = detectNegations('Influenza A: negative.');
+        expect(negations).toHaveLength(1);
+        expect(negations[0].type).toBe('negative');
+        expect(negations[0].negatedText).toBe('Influenza A');
+      });
+    });
+
+    describe('clause boundaries end the scope', () => {
+      it('negates only the finding after "but negative for"', () => {
+        const text = 'Swab positive for SARS-CoV-2 but negative for influenza A.';
+        const negations = detectNegations(text);
+        expect(negations).toHaveLength(1);
+        expect(negations[0].negatedText).toBe('influenza A');
+        expect(span(text, negations[0])).not.toContain('SARS');
+      });
+
+      it('starts a postfix target after "but"', () => {
+        const text = 'Swab positive for SARS-CoV-2 but influenza A negative.';
+        const negations = detectNegations(text);
+        expect(negations).toHaveLength(1);
+        expect(negations[0].negatedText).toBe('influenza A');
+        expect(span(text, negations[0])).toBe('influenza A negative');
+      });
+
+      it('stops a forward scope at "but"', () => {
+        expect(terms('No chest pain but reports palpitations.')).toEqual(['chest pain']);
+      });
+
+      it('drops the label before a dash ("Chest pain - ruled out MI")', () => {
+        const negations = detectNegations('1. Chest pain - ruled out MI, likely musculoskeletal');
+        expect(negations).toHaveLength(1);
+        expect(negations[0].type).toBe('ruled_out');
+        expect(negations[0].negatedText).toBe('MI');
+      });
+    });
+
+    describe('"not" + finding', () => {
+      it('detects "does not have fever"', () => {
+        const negations = detectNegations('She does not have fever.');
+        expect(negations).toHaveLength(1);
+        expect(negations[0].type).toBe('absent');
+        expect(negations[0].negatedText).toBe('fever');
+      });
+
+      it.each([
+        ['He did not have any chest pain.', 'chest pain'],
+        ['Abdomen is not tender.', 'tender'],
+        ['The rash was not pruritic.', 'pruritic'],
+        ["Patient doesn't report nausea.", 'nausea'],
+      ])('detects %s', (text, expected) => {
+        expect(terms(text)).toEqual([expected]);
+      });
+
+      it.each([
+        'This is not only painful but also swollen.',
+        'She is not sure when the symptoms began.',
+        'He is not able to walk far.',
+        'She did not tolerate the medication.',
+      ])('does not negate: %s', (text) => {
+        expect(detectNegations(text)).toHaveLength(0);
+      });
+
+      it('ends the scope at a new clause', () => {
+        expect(terms('She does not have fever and is eating well.')).toEqual(['fever']);
+      });
+    });
+
+    it('detects "never smoked"', () => {
+      const negations = detectNegations('He has never smoked.');
+      expect(negations).toHaveLength(1);
+      expect(negations[0].type).toBe('absent');
+      expect(negations[0].negatedText).toBe('smoked');
+    });
+
+    describe('field value "None"', () => {
+      it('negates the field name', () => {
+        const text = 'COMPLICATIONS: None.\nALLERGIES: None\nEBL: Minimal';
+        const negations = detectNegations(text);
+        expect(negations.map((n) => n.negatedText)).toEqual(['COMPLICATIONS', 'ALLERGIES']);
+        negations.forEach((n) => expect(n.type).toBe('absent'));
+        expect(span(text, negations[0])).toBe('COMPLICATIONS: None');
+      });
+
+      it('ignores "None" that is not the whole value', () => {
+        expect(detectNegations('Comment: None of the above applied.')).toHaveLength(0);
+      });
+    });
+
+    describe('postfix "absent"', () => {
+      it('detects "pedal pulses absent"', () => {
+        const text = 'Extremities: pedal pulses absent bilaterally.';
+        const negations = detectNegations(text);
+        expect(negations).toHaveLength(1);
+        expect(negations[0].type).toBe('absent');
+        expect(negations[0].negatedText).toBe('pedal pulses');
+        expect(span(text, negations[0])).toBe('pedal pulses absent');
+      });
+    });
+
+    describe('"nor" and "neither"', () => {
+      it('negates both findings in "no fever nor chills"', () => {
+        expect(isTermNegated('No fever nor chills.', 'fever')).toBe(true);
+        expect(isTermNegated('No fever nor chills.', 'chills')).toBe(true);
+      });
+
+      it('negates both findings in "neither fever nor chills"', () => {
+        expect(terms('Reports neither fever nor chills.')).toEqual(['fever nor chills']);
+      });
+    });
+
+    describe('coordinated lists', () => {
+      it('negates every item in "No cyanosis, clubbing or edema" as one span', () => {
+        const text = 'Extremities: No cyanosis, clubbing or edema. Pulses 2+.';
+        const negations = detectNegations(text);
+        expect(negations).toHaveLength(1);
+        expect(negations[0].negatedText).toBe('cyanosis, clubbing or edema');
+        expect(span(text, negations[0])).toBe('No cyanosis, clubbing or edema');
+        for (const term of ['cyanosis', 'clubbing', 'edema']) {
+          expect(isTermNegated(text, term)).toBe(true);
+        }
+      });
+
+      it('handles an Oxford-comma list with "and"', () => {
+        expect(terms('Denies fever, chills, and night sweats.')).toEqual([
+          'fever, chills, and night sweats',
+        ]);
+      });
+
+      it('ends the list at a sentence boundary', () => {
+        expect(terms('No cyanosis, clubbing or edema. Mild tremor, rigidity or both.')).toEqual([
+          'cyanosis, clubbing or edema',
+        ]);
+      });
+
+      it('ends the list at "but"', () => {
+        expect(terms('No cyanosis, clubbing or edema but has rash.')).toEqual([
+          'cyanosis, clubbing or edema',
+        ]);
+      });
+
+      it('does not extend past a comma into a new clause', () => {
+        expect(terms('No fever, patient is well.')).toEqual(['fever']);
+        expect(terms('No acute distress, alert and oriented.')).toEqual(['acute distress']);
+      });
+
+      it('keeps separately cued items separate', () => {
+        expect(terms('No fever, no chills, no night sweats.')).toEqual([
+          'fever',
+          'chills',
+          'night sweats',
+        ]);
+      });
+    });
+
+    describe('ROS-style "Negative X" (cue before the finding)', () => {
+      it('negates each item of "Negative A, negative B, negative C"', () => {
+        const text = 'GASTROINTESTINAL: Negative heartburn, negative nausea, negative vomiting.';
+        const negations = detectNegations(text);
+        expect(negations.map((n) => n.negatedText)).toEqual(['heartburn', 'nausea', 'vomiting']);
+        negations.forEach((n) => expect(n.type).toBe('negative'));
+        expect(span(text, negations[0])).toBe('Negative heartburn');
+      });
+
+      it('treats an unrepeated list after "Negative" like "No A, B or C"', () => {
+        const text = 'CARDIOVASCULAR: Negative chest pain, palpitations or leg swelling.';
+        expect(terms(text)).toEqual(['chest pain, palpitations or leg swelling']);
+      });
+
+      it.each([
+        ['EYES: Negative blurred vision, negative double vision.', ['blurred vision', 'double vision']],
+        ['- Negative Romberg\n- Negative Babinski', ['Romberg', 'Babinski']],
+        ['Gait steady. Negative Romberg sign.', ['Romberg sign']],
+        ['Urinalysis showed pH 6, negative nitrites.', ['nitrites']],
+        ['MUSCULOSKELETAL:\nNegative myalgia, negative joint stiffness.', ['myalgia', 'joint stiffness']],
+      ])('detects %s', (text, expected) => {
+        expect(terms(text)).toEqual(expected);
+      });
+
+      it.each([
+        'Negative pressure wound therapy was applied to the sacral wound.',
+        'Continue negative-pressure dressing changes.',
+        'The assay has a high negative predictive value.',
+        'Negative predictive value was 98%.',
+        'Negative inspiratory force measured at the bedside.',
+        'Culture grew gram-negative bacilli.',
+        'Gram negative rods on the smear.',
+        'Gram-negative rods were isolated.',
+        'Mother is Rh negative.',
+        'Rh negative mother, RhoGAM given.',
+      ])('does not negate: %s', (text) => {
+        expect(detectNegations(text)).toHaveLength(0);
+      });
+
+      it('keeps "HIV negative" as the postfix form', () => {
+        expect(terms('Screening: HIV negative, hepatitis C negative.')).toEqual(['HIV', 'hepatitis C']);
+        expect(terms('HIV negative patient admitted for observation.')).toEqual(['HIV']);
+      });
+
+      it('still negates the header for "Header: Negative" without a finding', () => {
+        expect(terms('REVIEW OF SYSTEMS: Negative except as noted in the HPI.')).toEqual([
+          'REVIEW OF SYSTEMS',
+        ]);
+        expect(terms('GI: Negative.')).toEqual(['GI']);
+      });
+
+      it('keeps "Test: negative for X" on the finding', () => {
+        expect(terms('Biopsy: negative for malignancy.')).toEqual(['malignancy']);
+      });
+    });
+
+    describe('"Header:" then "Negative" on the next line', () => {
+      it.each([
+        ['REVIEW OF SYSTEMS:\nNegative.', 'REVIEW OF SYSTEMS'],
+        ['PAST MEDICAL HISTORY:\n  Negative\nMEDICATIONS: None', 'PAST MEDICAL HISTORY'],
+        ['GI:\nNegative', 'GI'],
+      ])('negates the header in %j', (text, header) => {
+        const negations = detectNegations(text);
+        expect(negations[0].type).toBe('negative');
+        expect(negations[0].negatedText).toBe(header);
+        expect(span(text, negations[0])).toMatch(/Negative$/);
+      });
+
+      it('does not join a header to a later line', () => {
+        expect(detectNegations('ASSESSMENT:\nStable.\nNegative')).toHaveLength(0);
+      });
+    });
+
+    describe('"not" only negates inside a finding frame', () => {
+      it.each([
+        ['She does not have chest pain.', 'chest pain'],
+        ['He is not experiencing shortness of breath.', 'shortness of breath'],
+        ['She is not complaining of headache.', 'headache'],
+        ['The patient did not report nausea.', 'nausea'],
+        ["He hasn't had any fevers.", 'fevers'],
+        ['She has not been febrile overnight.', 'febrile overnight'],
+        ['Abdomen was not distended.', 'distended'],
+        ['Abdomen soft, not tender.', 'tender'],
+        ['He is not in any acute distress.', 'in any acute distress'],
+        ['He did not lose consciousness.', 'lose consciousness'],
+        ['The pain does not radiate to the jaw.', 'radiate to the jaw'],
+        ['She does not use illicit drugs.', 'use illicit drugs'],
+        ['He is not a smoker.', 'a smoker'],
+        ['He was never hospitalized.', 'hospitalized'],
+        ['I do not appreciate any murmur.', 'murmur'],
+        ['We did not see a tear on the images.', 'a tear on the images'],
+      ])('detects %s', (text, expected) => {
+        const negations = detectNegations(text);
+        expect(negations.map((n) => n.negatedText)).toEqual([expected]);
+        expect(negations[0].type).toBe('absent');
+      });
+
+      it.each([
+        // pseudo-negations
+        'He could not say whether or not the swelling had improved.',
+        'Return to clinic if not better in two days.',
+        'The lesion is not only red but also warm.',
+        'I did not think the outside result was accurate.',
+        'I do not see a need for antibiotics today.',
+        'The team is not certain of the diagnosis.',
+        'It is not clear when the cough began.',
+        'Fever is not necessarily present in older adults.',
+        'She does not want surgery at this time.',
+        'He does not wish to proceed with the biopsy.',
+        'The father does not know his blood type.',
+        'He does not recall the name of the inhaler.',
+        'The patient has not been seen since spring.',
+        'Prior records are not available.',
+        'Rectal exam was not done.',
+        // action frames
+        'The mother did not measure his temperature.',
+        'The family did not go to the emergency room.',
+        'She did not call the clinic over the weekend.',
+        'Her temperature was not measured at home.',
+        'He could not repeat the phrase.',
+        'He is not taking a shower daily.',
+        // admin
+        'I do not have the outside imaging report.',
+        'Risks include but are not limited to bleeding.',
+        'Gender: Not provided.',
+      ])('does not negate: %s', (text) => {
+        expect(detectNegations(text)).toHaveLength(0);
+      });
+    });
+
+    describe('scope never ends mid-word', () => {
+      const endsOnWord = (text: string) =>
+        detectNegations(text).forEach((n) => {
+          expect(text[n.endOffset] ?? ' ').toMatch(/\W/);
+          expect(n.negatedText).not.toMatch(/\s(?:or|and|of|the|to|is)$/);
+        });
+
+      it('cuts a long first item at the last whole word', () => {
+        const text = 'He never used tobacco products or illicit/intravenous drugs.';
+        expect(terms(text)).toEqual(['used tobacco products']);
+        endsOnWord(text);
+      });
+
+      it('drops a dangling function word at the cut', () => {
+        const text = 'There was no new hemorrhage or any other intracerebral pathology on the scan.';
+        expect(terms(text)).toEqual(['new hemorrhage']);
+        endsOnWord(text);
+      });
+
+      it('keeps a single token longer than the limit whole', () => {
+        const text = 'No pneumonoultramicroscopicsilicovolcanoconiosis.';
+        expect(terms(text)).toEqual(['pneumonoultramicroscopicsilicovolcanoconiosis']);
+      });
+
+      it('ends a very long list at a word boundary', () => {
+        const text =
+          'She denies fever, chills, sweats, nausea, vomiting, diarrhea, constipation, abdominal pain, ' +
+          'chest pain, shortness of breath, difficulty breathing, dyspnea on exertion or change in ' +
+          'exercise tolerance. She is otherwise well.';
+        endsOnWord(text);
+        expect(isTermNegated(text, 'dyspnea on exertion')).toBe(true);
       });
     });
   });
