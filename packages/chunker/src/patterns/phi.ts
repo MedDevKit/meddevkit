@@ -31,8 +31,9 @@ const BASIC_PHI_PATTERNS: Record<Exclude<PhiType, 'unknown'>, RegExp[]> = {
     /\b(0?[1-9]|1[0-2])[/-](0?[1-9]|[12]\d|3[01])[/-](\d{4}|\d{2})\b/g,
     // Written dates: January 15, 2024
     /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}\b/gi,
-    // DOB explicit mention
-    /\b(?:DOB|Date\s+of\s+Birth|Birth\s*date)[:\s]*\S+/gi,
+    // DOB explicit mention. The label must end at a word boundary so drug
+    // names such as "dobutamine" are not read as "DOB" + "utamine".
+    /\b(?:DOB|Date\s+of\s+Birth|Birth\s*date)\b[:\s]*\S+/gi,
   ],
 
   /**
@@ -86,28 +87,46 @@ const BASIC_PHI_PATTERNS: Record<Exclude<PhiType, 'unknown'>, RegExp[]> = {
    * Name patterns - Very difficult to detect accurately
    * Basic patterns for labeled names only
    * Includes conversational patterns for voice transcription
+   *
+   * All name patterns are case-sensitive (no `i` flag): with `i`, `[A-Z]`
+   * also matches lowercase, so ordinary words were flagged as names
+   * ("She will contact our office"). Label words are spelled out in Title,
+   * lower and UPPER case instead (`[Cc]ontact|CONTACT`).
+   *
+   * Name words are Title case (`John`) or, for all-caps dictated notes,
+   * UPPER case (`JOHN`). UPPER-case names are accepted only after a colon or
+   * an UPPER-case label, so lowercase prose such as "contact PCP" or
+   * "the brand name is ZESTRIL" is not flagged.
    */
   name: [
     // Dr. followed by capitalized name
     /\bDr\.?\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/g,
-    // Patient name with label
-    /\b(?:Patient(?:\s+Name)?|Name)[:\s]+([A-Z][a-z]+(?:\s+[A-Z]\.?)?(?:\s+[A-Z][a-z]+))\b/g,
+    // Patient name with label: "Patient Name: John Doe", "Name: John Doe",
+    // "Patient: John Doe", "Patient Name John Doe". A bare "Patient" needs a
+    // colon so headers like "Patient Information Name" are not flagged.
+    // Also UPPER case: "PATIENT NAME: JANE DOE", "NAME: JOHN SMITH".
+    /\b(?:(?:Patient|PATIENT)(?:\s+(?:Name|NAME))?\s*:|(?:Name|NAME)\s*:|(?:Patient|PATIENT)\s+(?:Name|NAME)\s)\s*((?:[A-Z][a-z]+|[A-Z]{2,})(?:\s+[A-Z]\.?)?(?:\s+(?:[A-Z][a-z]+|[A-Z]{2,})))\b/g,
     // Conversational: "patient's name is Fred Winkle" or "patient name is John Smith"
-    /\bpatient(?:'s)?\s+name\s+is\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/gi,
+    // (UPPER-case names only after an UPPER-case label)
+    /\b(?:[Pp]atient(?:'s)?\s+[Nn]ame\s+is\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)|PATIENT(?:'S)?\s+NAME\s+IS\s+((?:[A-Z][a-z]+|[A-Z]{2,})(?:\s+(?:[A-Z][a-z]+|[A-Z]{2,}))?))\b/g,
     // Conversational: "the name is Fred Winkle" or "name is John"
-    /\b(?:the\s+)?name\s+is\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/gi,
+    /\b(?:(?:[Tt]he\s+)?[Nn]ame\s+is\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)|(?:THE\s+)?NAME\s+IS\s+((?:[A-Z][a-z]+|[A-Z]{2,})(?:\s+(?:[A-Z][a-z]+|[A-Z]{2,}))?))\b/g,
     // Mr./Mrs./Ms./Miss followed by name
     /\b(?:Mr|Mrs|Ms|Miss)\.?\s+([A-Z][a-z]+)\b/g,
-    // Attention or contact name
-    /\b(?:Attn|Contact)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/gi,
+    // Attention or contact name: "Attn: Jane Wilson", "CONTACT: JANE WILSON",
+    // "Contact Jane Wilson" (UPPER-case names need a colon or UPPER label)
+    /\b(?:(?:[Aa]ttn|ATTN|[Cc]ontact|CONTACT)\s*:\s*((?:[A-Z][a-z]+|[A-Z]{2,})(?:\s+(?:[A-Z][a-z]+|[A-Z]{2,}))?)|(?:ATTN|CONTACT)\s+((?:[A-Z][a-z]+|[A-Z]{2,})(?:\s+(?:[A-Z][a-z]+|[A-Z]{2,}))?)|(?:[Aa]ttn|[Cc]ontact)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?))\b/g,
   ],
 
   /**
    * Street address patterns
    */
   address: [
-    // Street address: 123 Main St, 456 Oak Avenue
-    /\b\d{1,5}\s+(?:[A-Z][a-z]+\s+){1,3}(?:St(?:reet)?|Ave(?:nue)?|Blvd|Boulevard|Rd|Road|Dr(?:ive)?|Ln|Lane|Way|Ct|Court|Pl(?:ace)?|Cir(?:cle)?)\.?\b/gi,
+    // Street address: 123 Main St, 456 Oak Avenue, 123 MAIN STREET.
+    // Case-sensitive: street-name words and the suffix must be Title or UPPER
+    // case, so lowercase prose like "5 years ago with Dr" or "20 minutes each
+    // way" is not flagged (it was with the old `i` flag).
+    /\b\d{1,5}\s+(?:(?:[A-Z][a-z]+|[A-Z]{2,})\s+){1,3}(?:St(?:reet)?|ST(?:REET)?|Ave(?:nue)?|AVE(?:NUE)?|Blvd|BLVD|Boulevard|BOULEVARD|Rd|RD|Road|ROAD|Dr(?:ive)?|DR(?:IVE)?|Ln|LN|Lane|LANE|Way|WAY|Ct|CT|Court|COURT|Pl(?:ace)?|PL(?:ACE)?|Cir(?:cle)?|CIR(?:CLE)?)\.?\b/g,
     // PO Box
     /\b(?:P\.?\s*O\.?\s*Box|Post\s+Office\s+Box)\s+\d+\b/gi,
     // Address with label

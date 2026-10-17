@@ -40,7 +40,15 @@ export interface MedicalChunkerConfig {
   maxTokens?: number;
 
   /**
-   * Minimum tokens per chunk (avoids tiny chunks)
+   * Minimum tokens per chunk core (avoids tiny chunks); a target, not a
+   * guarantee.
+   *
+   * A split that would leave a core below minTokens (often a short section
+   * such as "ALLERGIES: NKDA." cut off by a section boundary) is not
+   * emitted on its own: the chunk is extended into the following text,
+   * within the same maxTokens budget, until it reaches minTokens. Text is
+   * never dropped. A chunk can still be below minTokens when it is the last
+   * chunk, or when extending it would exceed maxTokens.
    * @default 50
    */
   minTokens?: number;

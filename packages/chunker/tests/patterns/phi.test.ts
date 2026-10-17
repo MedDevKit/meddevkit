@@ -579,4 +579,108 @@ Labs: Glucose 95, HbA1c 6.2%, eGFR 90`;
       expect(PHI_CONFIDENCE.unknown).toBeDefined();
     });
   });
+
+  describe('False Positives From Real Notes', () => {
+    it('should not flag "dobutamine" as a DOB date', () => {
+      const markers = detectPhi('A dobutamine stress echocardiogram was negative.');
+      expect(markers.find((m) => m.type === 'date')).toBeUndefined();
+    });
+
+    it('should still flag labelled DOB forms', () => {
+      for (const text of ['DOB: 01/02/1960', 'D.O.B. 1/2/60', 'dob 01/02/1960']) {
+        const markers = detectPhi(text);
+        expect(markers.find((m) => m.type === 'date'), text).toBeDefined();
+      }
+      const dob = detectPhi('DOB: 01/02/1960').find((m) => m.type === 'date');
+      expect(dob?.startOffset).toBe(0);
+    });
+
+    it('should not flag lowercase words after "contact" as a name', () => {
+      const markers = detectPhi('She will contact our office if symptoms worsen.');
+      expect(markers.find((m) => m.type === 'name')).toBeUndefined();
+    });
+
+    it('should still flag a capitalised contact name', () => {
+      const markers = detectPhi('Contact: Jane Wilson');
+      expect(markers.find((m) => m.type === 'name')).toBeDefined();
+    });
+
+    it('should not flag "Patient Information Name" as a name', () => {
+      const markers = detectPhi('Patient Information Name');
+      expect(markers.find((m) => m.type === 'name')).toBeUndefined();
+    });
+
+    it('should still flag labelled patient names', () => {
+      for (const text of ['Patient: John Smith', 'Patient Name John Smith', 'Name: John Smith']) {
+        const markers = detectPhi(text);
+        expect(markers.find((m) => m.type === 'name'), text).toBeDefined();
+      }
+    });
+
+    it('should not flag lowercase words after "name is"', () => {
+      const markers = detectPhi('Her name is not on the schedule.');
+      expect(markers.find((m) => m.type === 'name')).toBeUndefined();
+    });
+
+    it('should still flag Mr. and Dr. prefixed names', () => {
+      for (const text of ['Mr. John Smith was seen.', 'Seen by Dr. Jane Doe.']) {
+        const markers = detectPhi(text);
+        expect(markers.find((m) => m.type === 'name'), text).toBeDefined();
+      }
+    });
+
+    it('should not flag lowercase phrases ending in a street suffix as addresses', () => {
+      for (const text of [
+        'Symptoms began 5 years ago with Dr',
+        'He drives 20 minutes each way to work.',
+        'Surgery may be needed 4 months down the road.',
+      ]) {
+        const markers = detectPhi(text);
+        expect(markers.find((m) => m.type === 'address'), text).toBeUndefined();
+      }
+    });
+
+    it('should still flag capitalised street addresses', () => {
+      for (const text of ['Lives at 123 Main Street', '45 Elm St.', '9 Lake Shore Dr']) {
+        const markers = detectPhi(text);
+        expect(markers.find((m) => m.type === 'address'), text).toBeDefined();
+      }
+    });
+  });
+
+  describe('All-Caps Notes', () => {
+    it('should flag all-caps street addresses', () => {
+      for (const text of ['LIVES AT 123 MAIN STREET', '456 OAK AVE', '9 LAKE SHORE DR.']) {
+        const markers = detectPhi(text);
+        expect(markers.find((m) => m.type === 'address'), text).toBeDefined();
+      }
+    });
+
+    it('should flag all-caps labelled names', () => {
+      for (const text of [
+        'Name: JOHN SMITH',
+        'PATIENT NAME: JANE DOE',
+        'NAME: JOHN Q SMITH',
+        'PATIENT: JANE DOE',
+        'CONTACT: JANE WILSON',
+        'ATTN JANE WILSON',
+        "PATIENT'S NAME IS FRED WINKLE",
+      ]) {
+        const markers = detectPhi(text);
+        expect(markers.find((m) => m.type === 'name'), text).toBeDefined();
+      }
+    });
+
+    it('should not flag an all-caps header row as a name', () => {
+      const markers = detectPhi('PATIENT INFORMATION NAME');
+      expect(markers.find((m) => m.type === 'name')).toBeUndefined();
+    });
+
+    it('should not flag all-caps words after a lowercase label without a colon', () => {
+      for (const text of ['Please contact PCP for refills.', 'The brand name is ZESTRIL.']) {
+        const markers = detectPhi(text);
+        expect(markers.find((m) => m.type === 'name'), text).toBeUndefined();
+      }
+    });
+  });
 });

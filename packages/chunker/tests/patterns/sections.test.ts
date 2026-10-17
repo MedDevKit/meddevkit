@@ -499,4 +499,137 @@ HPI: Patient reports...`;
       expect(sections).toHaveLength(0);
     });
   });
+
+  describe('Keyword Boundaries (false positives from real notes)', () => {
+    const types = (text: string) => detectSections(text).map((s) => s.type);
+
+    it('should not treat "She ..." as a social history (SH) header', () => {
+      expect(detectSections('She is well.')).toHaveLength(0);
+    });
+
+    it('should not treat "Shortness of breath." under a header as SH', () => {
+      const sections = detectSections('CHIEF COMPLAINT\n\nShortness of breath.');
+      expect(types('CHIEF COMPLAINT\n\nShortness of breath.')).toEqual(['chief_complaint']);
+      expect(sections[0].startOffset).toBe(0);
+    });
+
+    it('should not treat words starting with "Pe" as a PE header', () => {
+      expect(types('ALLERGIES: Penicillin.')).toEqual(['allergies']);
+      expect(types('ALLERGIES:\nPenicillin.')).toEqual(['allergies']);
+      expect(types('PERSONAL HISTORY: Lives alone')).not.toContain('physical_exam');
+      expect(types('Peripheral pulses are 2+ bilaterally.')).toHaveLength(0);
+    });
+
+    it('should not treat "PE" (pulmonary embolism) opening a sentence as a header', () => {
+      expect(types('PE was ruled out with CT angiography.')).toHaveLength(0);
+    });
+
+    it('should still detect PE as a header with a colon, dash, or alone on a line', () => {
+      expect(types('PE: Well-appearing')).toEqual(['physical_exam']);
+      expect(types('PE - Well-appearing')).toEqual(['physical_exam']);
+      expect(types('PE\nWell-appearing')).toEqual(['physical_exam']);
+      expect(types('P.E.: Well-appearing')).toEqual(['physical_exam']);
+    });
+
+    it('should not treat a word that merely starts with a keyword as a header', () => {
+      expect(types('Labored breathing noted.')).toHaveLength(0);
+      expect(types('Planned follow-up in 2 weeks.')).toHaveLength(0);
+      expect(types('Social worker consulted.')).toHaveLength(0);
+    });
+
+    it('should still detect headers alone on a line without a colon', () => {
+      const text = 'CHIEF COMPLAINT\nChest pain\n\nSOCIAL\nLives with spouse\n\nPHYSICAL EXAM\nNAD';
+      expect(types(text)).toEqual(['chief_complaint', 'social_history', 'physical_exam']);
+    });
+
+    it('should still detect headers followed by qualifying words', () => {
+      expect(types('MEDICATIONS ON ADMISSION:')).toEqual(['medications']);
+      expect(types('LABORATORY DATA:')).toEqual(['labs']);
+      expect(types('PROCEDURE PERFORMED:')).toEqual(['procedures']);
+      expect(types('SOCIAL HX: Nonsmoker')).toEqual(['social_history']);
+    });
+
+    it('should still detect every standard abbreviation and header', () => {
+      const cases: Array<[string, string]> = [
+        ['CC: Cough', 'chief_complaint'],
+        ['HPI: 55 yo male', 'hpi'],
+        ['PE: NAD', 'physical_exam'],
+        ['PHYSICAL EXAM:', 'physical_exam'],
+        ['PHYSICAL EXAMINATION:', 'physical_exam'],
+        ['A/P:', 'assessment'],
+        ['ROS: Negative', 'review_of_systems'],
+        ['PMH: HTN', 'past_medical_history'],
+        ['SH: Nonsmoker', 'social_history'],
+        ['FH: Noncontributory', 'family_history'],
+        ['MEDICATIONS:', 'medications'],
+        ['ALLERGIES: NKDA', 'allergies'],
+        ['VITALS: BP 120/80', 'vitals'],
+        ['PLAN:', 'plan'],
+        ['IMPRESSION:', 'assessment'],
+        ['PROCEDURE:', 'procedures'],
+      ];
+      for (const [text, type] of cases) {
+        expect(types(text), text).toEqual([type]);
+      }
+    });
+  });
+
+  describe('Plural and variant headers (real notes)', () => {
+    const types = (text: string) => detectSections(text).map((s) => s.type);
+
+    it.each([
+      ['PLANS: Follow up in 2 weeks', 'plan'],
+      ['PLANS/RECOMMENDATIONS:', 'plan'],
+      ['ASSESSMENTS: Stable', 'assessment'],
+      ['LABORATORIES: CBC normal', 'labs'],
+      ['LABORATORIES ON ADMISSION:', 'labs'],
+      ['Laboratories:  The patient forgot to bring results.', 'labs'],
+      ['LABORATORY DATA: Unremarkable', 'labs'],
+      ['LABS: Pending', 'labs'],
+      ['X-RAYS: Three views of the knee', 'imaging'],
+      ['X-RAY: Chest clear', 'imaging'],
+      ['IMAGING: None', 'imaging'],
+      ['SOCIAL AND DEVELOPMENTAL HISTORY: Lives with parents', 'social_history'],
+      ['SOCIAL/DEVELOPMENTAL HISTORY:', 'social_history'],
+      ['SOCIAL/FAMILY HISTORY: Noncontributory', 'social_history'],
+      ['SOCIAL HABITS: Nonsmoker', 'social_history'],
+      ['SOCIAL BACKGROUND: Married', 'social_history'],
+    ])('should detect "%s" as %s', (text, type) => {
+      expect(types(text)).toEqual([type]);
+    });
+
+    it.each([
+      'Plans for postpartum care include routine follow-up.',
+      'Plantar fascitis, left foot.',
+      'PLANNED RECONSTRUCTION',
+      'Assessments of gait were repeated.',
+      'Laboratories drawn at 1449 today, WBC 10.',
+      'X-rays of the right knee were obtained and reviewed.',
+      'X-rays taken today; three views of the right foot.',
+      'SOCIAL WORK: Consulted',
+      'Social worker consulted.',
+    ])('should not treat "%s" as a header', (text) => {
+      expect(types(text)).toHaveLength(0);
+    });
+  });
+
+  describe('Diagnosis Header Aliases', () => {
+    it('should map qualified diagnosis headers to assessment', () => {
+      for (const header of [
+        'PREOPERATIVE DIAGNOSIS: Left inguinal hernia',
+        'POSTOPERATIVE DIAGNOSIS: Same',
+        'POST-OPERATIVE DIAGNOSES:',
+        'DISCHARGE DIAGNOSIS:',
+        'ADMITTING DIAGNOSIS: Pneumonia',
+        'DIAGNOSES:',
+      ]) {
+        expect(detectSections(header).map((s) => s.type), header).toEqual(['assessment']);
+      }
+    });
+
+    it('should not treat a sentence about a diagnosis as a header', () => {
+      expect(detectSections('Discharge was delayed for diagnostic testing.')).toHaveLength(0);
+      expect(detectSections('Diagnostic workup is pending.')).toHaveLength(0);
+    });
+  });
 });
