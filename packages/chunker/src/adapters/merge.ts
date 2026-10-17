@@ -318,7 +318,11 @@ export function mergeEntities(input: MergeInput): MergeOutput {
     const e = draft.entity;
     const hasProviderData = e.sources.some((s) => s !== LOCAL_ADAPTER_NAME);
     const providerOpinion = hasProviderData ? draft.providerNegated : undefined;
-    const local = overlapsNegation(e.startOffset, e.endOffset, input.negations);
+    // Provider concepts may include the cue ("no acute distress"): ignore
+    // a negation whose cue lies inside such an entity
+    const local = overlapsNegation(e.startOffset, e.endOffset, input.negations, {
+      ignoreCueInside: hasProviderData,
+    });
     const { isNegated, agreement } = resolveNegation(local, providerOpinion, input.negationPolicy);
     e.isNegated = isNegated;
     e.negation =
