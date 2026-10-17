@@ -35,7 +35,9 @@ import type {
   SplitReason,
   PatternMatch,
   ChunkMetadata,
+  ChunkOptions,
 } from './types';
+import type { MedicalEntity } from './adapters/types';
 
 import {
   detectVitals,
@@ -88,6 +90,13 @@ const DEFAULT_CONFIG: Required<MedicalChunkerConfig> = {
 };
 
 /**
+ * Longest entity (in characters) that is protected from splitting. Longer
+ * entities, and clusters of overlapping entities longer than this, are
+ * still attached to chunk metadata but may be split.
+ */
+const MAX_PROTECTED_ENTITY_CHARS = 100;
+
+/**
  * Document-level detections, with offsets into the normalized text.
  * Per-chunk lists are derived from these for each chunk's text range.
  */
@@ -100,6 +109,8 @@ interface DocumentDetections {
   severity: SeverityModifier[];
   /** Plugin patterns to attach to chunks (empty when not attaching) */
   pluginPatterns: Map<string, PatternMatch[]>;
+  /** Validated caller entities (undefined when the option was not given) */
+  entities?: MedicalEntity[];
 }
 
 // ============================================================================
@@ -143,6 +154,11 @@ export class MedicalChunker {
    * Chunk clinical text with medical context awareness
    *
    * @param text - Clinical note text to chunk
+   * @param options - Per-call options. `options.entities` takes entities
+   *   from a clinical NLP analysis (offsets relative to the normalized
+   *   text): short entities are protected from splitting and every entity
+   *   is attached, rebased, to `metadata.entities` of the chunks that
+   *   contain it. See {@link ChunkOptions}.
    * @returns Chunking result with chunks and metadata
    *
    * @example
@@ -154,8 +170,23 @@ export class MedicalChunker {
    *   Patient is a 55 year old male...
    * `);
    * ```
+   *
+   * @example
+   * ```typescript
+   * // With entities from MedicalAnalyzer: chunk the analyzed (normalized)
+   * // text so entity offsets line up
+   * const analysis = await analyzer.analyze(note);
+   * const result = chunker.chunk(analysis.text, {
+   *   entities: analysis.entities,
+   * });
+   * for (const chunk of result.chunks) {
+   *   for (const e of chunk.metadata.entities ?? []) {
+   *     chunk.text.slice(e.startOffset, e.endOffset) === e.text; // true
+   *   }
+   * }
+   * ```
    */
-  public chunk(text: string): ChunkingResult {
+  public chunk(text: string, options?: ChunkOptions): ChunkingResult {
     const startTime = performance.now();
     const warnings: string[] = [];
 
@@ -165,6 +196,17 @@ export class MedicalChunker {
     if (!normalizedText) {
       return this.emptyResult(0);
     }
+
+    // Caller-provided entities (undefined when the option was not given)
+    const entities =
+      options?.entities !== undefined
+        ? this.validateEntities(
+            options.entities,
+            text,
+            normalizedText,
+            warnings
+          )
+        : undefined;
 
     // Pre-process: detect sections, vitals, PHI markers
     const sections = this.config.preserveSections
@@ -203,6 +245,14 @@ export class MedicalChunker {
       medications,
       this.config.customPreservePatterns
     );
+
+    // Entity ranges are merged in before plugins run so plugins see them
+    if (entities && entities.length > 0) {
+      protectedRanges = this.mergeProtectedRanges([
+        ...protectedRanges,
+        ...this.getEntityProtectedRanges(entities),
+      ]);
+    }
 
     // Plugin integration
     let pluginPatterns: Map<string, PatternMatch[]> = new Map();
@@ -273,6 +323,9 @@ export class MedicalChunker {
           ? pluginPatterns
           : new Map(),
     };
+    if (entities) {
+      detections.entities = entities;
+    }
 
     // Perform chunking
     let chunks = this.performChunking(
@@ -331,6 +384,9 @@ export class MedicalChunker {
           : undefined,
       },
     };
+    if (entities) {
+      result.metadata.entitiesProvided = entities.length;
+    }
 
     // Plugin: onDocumentEnd
     if (this.pluginManager && ctx) {
@@ -427,6 +483,93 @@ export class MedicalChunker {
 
     // Merge overlapping ranges
     return this.mergeProtectedRanges(ranges);
+  }
+
+  /**
+   * Validate caller entities against the normalized text.
+   *
+   * Returns [] (with a warning) when the input text was not normalized,
+   * since offsets relative to the normalized text cannot be trusted to
+   * line up. Otherwise drops entities with invalid offsets or a non-empty
+   * `text` that does not match the text at their offsets (one aggregated
+   * warning). Returned entities are copies whose `text` is the slice at
+   * their offsets.
+   */
+  private validateEntities(
+    entities: MedicalEntity[],
+    text: string,
+    normalizedText: string,
+    warnings: string[]
+  ): MedicalEntity[] {
+    if (normalizedText !== text) {
+      if (entities.length > 0) {
+        warnings.push(
+          'entities ignored: text was not normalized; pass MedicalAnalysisResult.text'
+        );
+      }
+      return [];
+    }
+
+    const valid: MedicalEntity[] = [];
+    let skipped = 0;
+    for (const entity of entities) {
+      const start = entity?.startOffset;
+      const end = entity?.endOffset;
+      if (
+        !Number.isInteger(start) ||
+        !Number.isInteger(end) ||
+        start < 0 ||
+        end <= start ||
+        end > normalizedText.length
+      ) {
+        skipped++;
+        continue;
+      }
+      const slice = normalizedText.slice(start, end);
+      if (
+        typeof entity.text === 'string' &&
+        entity.text.length > 0 &&
+        entity.text !== slice
+      ) {
+        skipped++;
+        continue;
+      }
+      valid.push({ ...entity, text: slice });
+    }
+
+    if (skipped > 0) {
+      warnings.push(
+        `${skipped} ${skipped === 1 ? 'entity' : 'entities'} skipped: invalid offsets or text mismatch`
+      );
+    }
+    return valid;
+  }
+
+  /**
+   * Protected ranges for caller entities.
+   *
+   * Overlapping entities are merged into clusters first; a cluster longer
+   * than MAX_PROTECTED_ENTITY_CHARS (or than one chunk's worth of
+   * characters, for very small maxTokens) is not protected. This keeps
+   * entities from creating protected ranges long enough to force oversize
+   * chunks: findBestSplitPoint extends a chunk past any protected range it
+   * cannot split before.
+   */
+  private getEntityProtectedRanges(entities: MedicalEntity[]): ProtectedRange[] {
+    const limit = Math.min(
+      MAX_PROTECTED_ENTITY_CHARS,
+      estimateCharsForTokens(this.config.maxTokens)
+    );
+    const clusters = this.mergeProtectedRanges(
+      entities
+        .filter((e) => e.endOffset - e.startOffset <= limit)
+        .map((e) => ({
+          start: e.startOffset,
+          end: e.endOffset,
+          reason: 'entity' as const,
+        }))
+    );
+    return clusters.filter((r) => r.end - r.start <= limit);
   }
 
   /**
@@ -568,6 +711,16 @@ export class MedicalChunker {
       metadata.pluginPatterns = pluginPatterns;
       metadata.allPatternMatches = allMatches.sort(
         (a, b) => a.startOffset - b.startOffset
+      );
+    }
+
+    // Caller entities: bounded by the trimmed chunk text (not `end`) so an
+    // entity ending in trailing whitespace is never attached past it
+    if (detections.entities) {
+      metadata.entities = this.getSpansInRange(
+        detections.entities,
+        textStart,
+        textStart + chunkText.length
       );
     }
 

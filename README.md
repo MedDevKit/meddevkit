@@ -193,6 +193,37 @@ Plugins can be published to npm as `@meddevkit/plugin-*` packages for community 
 - `onDocumentEnd` — Called after processing completes
 - `onUnload` — Cleanup when plugin is removed
 
+## Clinical NLP providers (MedicalAnalyzer)
+
+`MedicalAnalyzer` combines the local detectors with a clinical NLP provider (Azure Text Analytics for health, or your own) and returns provider-neutral entities you can feed into the chunker:
+
+- **Local detection** runs first: PHI, sections, vitals, medications, negation.
+- **PHI policy** is applied before any text leaves the process (`'mask'` by default, same-length so offsets stay valid).
+- **Provider**: the first available adapter in `providers` order is called, with a timeout. If all fail, you get a degraded local-only result.
+- **Merge**: the provider owns diagnoses, symptoms, procedures and codes; local owns PHI, sections, parsed vitals and dose/route/frequency. Negation is `'either'` by default, and disagreements are flagged.
+- **Chunk with entities**: entities are protected from splitting and attached to chunk metadata.
+
+```typescript
+import { MedicalChunker, MedicalAnalyzer } from '@meddevkit/chunker';
+import { AzureHealthAdapter } from '@meddevkit/adapter-azure';
+
+const analyzer = new MedicalAnalyzer({
+  providers: [
+    new AzureHealthAdapter({
+      endpoint: process.env.AZURE_LANGUAGE_ENDPOINT!,
+      apiKey: process.env.AZURE_LANGUAGE_KEY,
+    }),
+  ],
+});
+
+const analysis = await analyzer.analyze(note);
+const result = new MedicalChunker().chunk(analysis.text, { entities: analysis.entities });
+```
+
+To add another provider, implement the `MedicalNlpAdapter` interface and pass it in `providers`.
+
+> **Note:** PHI masking is regex-based and best-effort. It is not HIPAA de-identification; only send clinical text to a provider under an agreement (such as a BAA) that permits it.
+
 ## API Reference
 
 ### MedicalChunker
@@ -310,6 +341,7 @@ Contact us about **MedDevKit Cloud** or consulting services.
 | Package | Description | Status |
 |---------|-------------|--------|
 | [@meddevkit/chunker](https://github.com/MedDevKit/meddevkit/tree/main/packages/chunker) | PHI-aware medical text chunker with plugin system | Available |
+| [@meddevkit/adapter-azure](https://github.com/MedDevKit/meddevkit/tree/main/packages/adapter-azure) | Azure Text Analytics for health provider adapter | Available |
 | @meddevkit/terminology | Medical term normalizer | Coming soon |
 | @meddevkit/retrieval | Cascading medical retrieval | Coming soon |
 

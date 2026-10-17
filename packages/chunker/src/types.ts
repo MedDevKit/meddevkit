@@ -5,6 +5,8 @@
  * @packageDocumentation
  */
 
+import type { MedicalEntity } from './adapters/types';
+
 // ============================================================================
 // Configuration Types
 // ============================================================================
@@ -304,6 +306,20 @@ export interface ChunkMetadata {
    * Flattened list of all plugin pattern matches, sorted by position
    */
   allPatternMatches?: PatternMatch[];
+
+  /**
+   * Entities passed via {@link ChunkOptions.entities} that lie fully within
+   * this chunk's text (including any overlap prefix). Copies with
+   * `startOffset`/`endOffset` relative to `chunk.text`, so
+   * `chunk.text.slice(e.startOffset, e.endOffset) === e.text`.
+   *
+   * An entity that crosses a chunk boundary (only possible for entities too
+   * long to be protected from splitting) is attached only to chunks that
+   * fully contain it, and is omitted from chunk metadata if no chunk does.
+   *
+   * Present (possibly empty) only when the `entities` option was provided.
+   */
+  entities?: MedicalEntity[];
 }
 
 // ============================================================================
@@ -649,6 +665,31 @@ export type SeverityLevel = 'mild' | 'moderate' | 'severe' | 'critical';
 // ============================================================================
 
 /**
+ * Per-call options for {@link MedicalChunker.chunk}.
+ */
+export interface ChunkOptions {
+  /**
+   * Entities from a clinical NLP analysis (typically
+   * `MedicalAnalysisResult.entities` from `MedicalAnalyzer`).
+   *
+   * Offsets must refer to the normalized text, i.e. `normalizeText(text)`.
+   * Pass `MedicalAnalysisResult.text` as the text to chunk: if the text
+   * given to `chunk()` is not already normalized, all entities are ignored
+   * and a warning is added to `metadata.warnings`. Entities with invalid
+   * offsets (non-integer, negative, empty, or past the end of the text) or
+   * whose non-empty `text` does not match the text at their offsets are
+   * skipped, with one aggregated warning.
+   *
+   * Valid entities of at most 100 characters (and no longer than the
+   * chunk size) are protected from splitting, like vital signs and
+   * medications. Every valid entity is attached to `metadata.entities` of
+   * each chunk that fully contains it, with offsets relative to
+   * `chunk.text`.
+   */
+  entities?: MedicalEntity[];
+}
+
+/**
  * Result of chunking clinical text
  */
 export interface ChunkingResult {
@@ -741,6 +782,13 @@ export interface ProcessingMetadata {
    * Total pattern matches detected by plugins
    */
   pluginPatternsDetected?: number;
+
+  /**
+   * Number of valid entities used from {@link ChunkOptions.entities}
+   * (0 when they were all ignored or skipped). Present only when the
+   * `entities` option was provided.
+   */
+  entitiesProvided?: number;
 }
 
 // ============================================================================
@@ -764,7 +812,14 @@ export interface ProtectedRange {
   /**
    * Reason this range is protected
    */
-  reason: 'vital' | 'medication' | 'custom' | 'sentence' | 'plugin';
+  reason:
+    | 'vital'
+    | 'medication'
+    | 'custom'
+    | 'sentence'
+    | 'plugin'
+    /** An entity passed via {@link ChunkOptions.entities} */
+    | 'entity';
 }
 
 /**

@@ -1,0 +1,225 @@
+{
+  "jobId": "00000000-0000-0000-0000-000000000001",
+  "displayName": "meddevkit",
+  "createdDateTime": "2026-01-01T00:00:00Z",
+  "lastUpdatedDateTime": "2026-01-01T00:00:02Z",
+  "expirationDateTime": "2026-01-02T00:00:00Z",
+  "status": "succeeded",
+  "errors": [],
+  "tasks": {
+    "completed": 1,
+    "failed": 0,
+    "inProgress": 0,
+    "total": 1,
+    "items": [
+      {
+        "kind": "HealthcareLROResults",
+        "taskName": "meddevkit-health",
+        "lastUpdateDateTime": "2026-01-01T00:00:02Z",
+        "status": "succeeded",
+        "results": {
+          "documents": [
+            {
+              "id": "0",
+              "entities": [
+                {
+                  "offset": 20,
+                  "length": 10,
+                  "text": "chest pain",
+                  "category": "SymptomOrSign",
+                  "confidenceScore": 0.98,
+                  "assertion": {
+                    "certainty": "negative"
+                  },
+                  "name": "Chest Pain",
+                  "links": [
+                    {
+                      "dataSource": "UMLS",
+                      "id": "C0008031"
+                    },
+                    {
+                      "dataSource": "SNOMEDCT_US",
+                      "id": "29857009"
+                    }
+                  ]
+                },
+                {
+                  "offset": 32,
+                  "length": 6,
+                  "text": "Mother",
+                  "category": "FamilyRelation",
+                  "confidenceScore": 0.99,
+                  "name": "Mother",
+                  "links": [
+                    {
+                      "dataSource": "UMLS",
+                      "id": "C0026591"
+                    }
+                  ]
+                },
+                {
+                  "offset": 43,
+                  "length": 13,
+                  "text": "breast cancer",
+                  "category": "Diagnosis",
+                  "confidenceScore": 0.97,
+                  "assertion": {
+                    "association": "other",
+                    "temporality": "past"
+                  },
+                  "name": "Malignant neoplasm of breast",
+                  "links": [
+                    {
+                      "dataSource": "UMLS",
+                      "id": "C0006142"
+                    },
+                    {
+                      "dataSource": "ICD10CM",
+                      "id": "C50.919"
+                    },
+                    {
+                      "dataSource": "SNOMEDCT_US",
+                      "id": "254837009"
+                    }
+                  ]
+                },
+                {
+                  "offset": 61,
+                  "length": 9,
+                  "text": "dizziness",
+                  "category": "SymptomOrSign",
+                  "confidenceScore": 0.95,
+                  "assertion": {
+                    "conditionality": "hypothetical",
+                    "certainty": "positivePossible"
+                  },
+                  "name": "Dizziness",
+                  "links": [
+                    {
+                      "dataSource": "UMLS",
+                      "id": "C0012833"
+                    }
+                  ]
+                },
+                {
+                  "offset": 110,
+                  "length": 10,
+                  "text": "Lisinopril",
+                  "category": "MedicationName",
+                  "confidenceScore": 1.0,
+                  "name": "lisinopril",
+                  "links": [
+                    {
+                      "dataSource": "UMLS",
+                      "id": "C0065374"
+                    },
+                    {
+                      "dataSource": "RXNORM",
+                      "id": "29046"
+                    }
+                  ]
+                },
+                {
+                  "offset": 121,
+                  "length": 5,
+                  "text": "10 mg",
+                  "category": "Dosage",
+                  "confidenceScore": 0.99
+                },
+                {
+                  "offset": 127,
+                  "length": 2,
+                  "text": "PO",
+                  "category": "MedicationRoute",
+                  "confidenceScore": 0.96
+                },
+                {
+                  "offset": 130,
+                  "length": 5,
+                  "text": "daily",
+                  "category": "Frequency",
+                  "confidenceScore": 0.97
+                },
+                {
+                  "offset": 149,
+                  "length": 22,
+                  "text": "Essential hypertension",
+                  "category": "Diagnosis",
+                  "confidenceScore": 0.99,
+                  "name": "Essential (primary) hypertension",
+                  "links": [
+                    {
+                      "dataSource": "UMLS",
+                      "id": "C0085580"
+                    },
+                    {
+                      "dataSource": "ICD10CM",
+                      "id": "I10"
+                    },
+                    {
+                      "dataSource": "SNOMEDCT_US",
+                      "id": "59621000"
+                    }
+                  ]
+                }
+              ],
+              "relations": [
+                {
+                  "relationType": "DosageOfMedication",
+                  "confidenceScore": 0.99,
+                  "entities": [
+                    {
+                      "ref": "#/results/documents/0/entities/5",
+                      "role": "Dosage"
+                    },
+                    {
+                      "ref": "#/results/documents/0/entities/4",
+                      "role": "Medication"
+                    }
+                  ]
+                },
+                {
+                  "relationType": "RouteOfMedication",
+                  "confidenceScore": 0.98,
+                  "entities": [
+                    {
+                      "ref": "#/results/documents/0/entities/6",
+                      "role": "Route"
+                    },
+                    {
+                      "ref": "#/results/documents/0/entities/4",
+                      "role": "Medication"
+                    }
+                  ]
+                },
+                {
+                  "relationType": "FrequencyOfMedication",
+                  "confidenceScore": 0.97,
+                  "entities": [
+                    {
+                      "ref": "#/results/documents/0/entities/4",
+                      "role": "Medication"
+                    },
+                    {
+                      "ref": "#/results/documents/0/entities/7",
+                      "role": "Frequency"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [
+                {
+                  "code": "DocumentTruncated",
+                  "message": "Synthetic warning for tests.",
+                  "targetRef": "#/documents/0"
+                }
+              ]
+            }
+          ],
+          "errors": [],
+          "modelVersion": "2023-04-15"
+        }
+      }
+    ]
+  }
+}

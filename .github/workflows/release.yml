@@ -1,28 +1,62 @@
-name: Release @meddevkit/chunker
+name: Release
 
 # Publishes to npm via trusted publishing (OIDC): no npm token or OTP needed.
-# Trigger: push a tag chunker-v<version> matching packages/chunker/package.json,
-# or run manually from main.
+# Trigger: push a tag <prefix>-v<version> matching that package's package.json:
+#   chunker-v<version>        -> @meddevkit/chunker        (packages/chunker)
+#   adapter-azure-v<version>  -> @meddevkit/adapter-azure  (packages/adapter-azure)
+# or run manually from main and pick the package.
 
 on:
   push:
-    tags: ['chunker-v*']
+    tags: ['chunker-v*', 'adapter-azure-v*']
   workflow_dispatch:
+    inputs:
+      package:
+        description: Package to publish
+        required: true
+        type: choice
+        options:
+          - chunker
+          - adapter-azure
 
 permissions:
   contents: read
   id-token: write # required for npm trusted publishing and provenance
 
 concurrency:
-  group: release-chunker
+  group: release-${{ github.ref_name }}-${{ inputs.package }}
   cancel-in-progress: false
 
 jobs:
   publish:
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/chunker-v')
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/tags/chunker-v') ||
+      startsWith(github.ref, 'refs/tags/adapter-azure-v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Map the tag prefix (or the dispatch input) to a package directory and name
+      - name: Select package
+        env:
+          INPUT_PACKAGE: ${{ inputs.package }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            PREFIX="${GITHUB_REF_NAME%-v*}"
+          else
+            PREFIX="$INPUT_PACKAGE"
+          fi
+          case "$PREFIX" in
+            chunker) PKG_DIR=packages/chunker; PKG_NAME=@meddevkit/chunker ;;
+            adapter-azure) PKG_DIR=packages/adapter-azure; PKG_NAME=@meddevkit/adapter-azure ;;
+            *) echo "::error::Unknown package '$PREFIX'"; exit 1 ;;
+          esac
+          {
+            echo "PREFIX=$PREFIX"
+            echo "PKG_DIR=$PKG_DIR"
+            echo "PKG_NAME=$PKG_NAME"
+          } >> "$GITHUB_ENV"
 
       - uses: pnpm/action-setup@v4
 
@@ -37,16 +71,16 @@ jobs:
 
       - name: Check version
         id: version
-        working-directory: packages/chunker
         run: |
+          cd "$PKG_DIR"
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "chunker-v$VERSION" ]]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $VERSION"
+          if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "$PREFIX-v$VERSION" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match $PKG_NAME version $VERSION"
             exit 1
           fi
-          if npm view "@meddevkit/chunker@$VERSION" version >/dev/null 2>&1; then
-            echo "::notice::@meddevkit/chunker@$VERSION is already published; skipping"
+          if npm view "$PKG_NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "::notice::$PKG_NAME@$VERSION is already published; skipping"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -54,11 +88,13 @@ jobs:
         if: steps.version.outputs.skip != 'true'
         run: pnpm lint && pnpm typecheck && pnpm test
 
+      # The "..." suffix also builds workspace dependencies first (chunker before adapter-azure)
       - name: Build
         if: steps.version.outputs.skip != 'true'
-        run: pnpm --filter @meddevkit/chunker build
+        run: pnpm -r --filter "$PKG_NAME..." build
 
       - name: Publish
         if: steps.version.outputs.skip != 'true'
-        working-directory: packages/chunker
-        run: npm publish --provenance --access public
+        run: |
+          cd "$PKG_DIR"
+          npm publish --provenance --access public
