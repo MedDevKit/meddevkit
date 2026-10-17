@@ -74,6 +74,9 @@ The adapter can also be used directly (no PHI masking):
 | `language` | `'en'` | Document language (`analyze(text, { language })` overrides it) |
 | `pollIntervalMs` | `1000` | Delay between job status polls when Azure sends no `Retry-After` |
 | `maxPollMs` | `60000` | Give up waiting for a job after this long |
+| `maxRetries` | `4` | Retries per request after a 429, 5xx or network error; `0` disables retries |
+| `retryBaseDelayMs` | `1000` | Base delay for exponential backoff when Azure sends no retry header |
+| `maxRetryDelayMs` | `30000` | Upper bound for any single retry wait, including server-requested ones |
 | `fetch` | `globalThis.fetch` | Custom `fetch` (tests, proxies) |
 
 ### Authentication
@@ -149,14 +152,44 @@ result's `entities` array. Document warnings are reported as
   safe approximation. Documents are sent in as many jobs as needed, one after
   another, and offsets are shifted back onto the original text. Entities and
   relations that would span a cut are not detected.
-- **Rate limits:** depend on your pricing tier. A `429` (or any non-2xx)
-  response is thrown as an `AzureHealthError`; retry policy is up to the caller.
+- **Rate limits:** depend on your pricing tier; see [Retries](#retries).
 - **Polling:** the job is polled until it finishes, honoring `Retry-After`,
   for at most `maxPollMs`. Aborting the signal stops polling (the Azure job
   itself is not cancelled; results expire after 24 hours).
 - **Errors:** `AzureHealthError` carries the HTTP `status` and Azure error
   `code`. Error messages and warnings never contain the analyzed text. If some
   documents fail, the rest are returned with a warning; if all fail, it throws.
+
+## Retries
+
+Azure returns `429 Too Many Requests` under load and on the free tier. The job
+submit request and every status poll are retried, up to `maxRetries` times
+each (default 4, so at most 5 attempts), after:
+
+- HTTP `429`, `500`, `502`, `503` or `504`
+- a network error (`fetch` rejects)
+
+Other `4xx` responses (`400`, `401`, `403`, `404`, ...) and aborts are never
+retried.
+
+The wait before a retry is taken from the response's `retry-after-ms` or
+`x-ms-retry-after-ms` header, else `Retry-After` (seconds or HTTP date).
+Without one, it is exponential backoff with full jitter: a random delay
+between 0 and `retryBaseDelayMs * 2^retry`. Every wait is capped at
+`maxRetryDelayMs` and stops immediately when the abort signal fires. Poll
+retries also respect `maxPollMs`: a retry that would wait past the deadline
+fails with the `PollTimeout` error instead.
+
+When retries run out, the `AzureHealthError` carries the last HTTP `status`
+and Azure error `code`, and its message gives the number of attempts, e.g.
+`Azure health submit request was rate limited (HTTP 429) after 5 attempts`.
+Repeated network failures throw with code `NetworkError`. The total number of
+retries is reported as `result.metadata.retries`.
+
+A submit that fails with a network error may still have reached Azure, so
+retrying it can, rarely, create (and bill) a duplicate job whose results are
+never read. Set `maxRetries: 0` and retry yourself if that matters more than
+resilience. `getToken` is called again for every attempt.
 
 ## Cost
 

@@ -74,8 +74,31 @@ export interface AzureHealthAdapterConfig {
   pollIntervalMs?: number;
   /** Give up polling a job after this long. @default 60000 */
   maxPollMs?: number;
+  /**
+   * Retries per request (job submit and each status poll) after HTTP 429,
+   * 500, 502, 503, 504 or a network error. Other 4xx responses and caller
+   * aborts are never retried. `0` disables retries. @default 4
+   */
+  maxRetries?: number;
+  /**
+   * Base delay for exponential backoff with full jitter (a random delay
+   * between 0 and `retryBaseDelayMs * 2^retry`), used when the response has
+   * no `retry-after-ms`, `x-ms-retry-after-ms` or `Retry-After` header.
+   * @default 1000
+   */
+  retryBaseDelayMs?: number;
+  /** Upper bound for any single retry delay, including server-sent ones. @default 30000 */
+  maxRetryDelayMs?: number;
   /** fetch implementation (for tests or custom agents). @default globalThis.fetch */
   fetch?: typeof fetch;
+}
+
+/** HTTP statuses that are retried */
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+
+/** Per-analyze retry bookkeeping */
+interface RetryState {
+  retries: number;
 }
 
 /**
@@ -88,8 +111,8 @@ export class AzureHealthError extends Error {
   /** Azure error code, if any */
   readonly code?: string;
 
-  constructor(message: string, options: { status?: number; code?: string } = {}) {
-    super(message);
+  constructor(message: string, options: { status?: number; code?: string; cause?: unknown } = {}) {
+    super(message, options.cause === undefined ? undefined : { cause: options.cause });
     this.name = 'AzureHealthError';
     this.status = options.status;
     this.code = options.code;
@@ -131,6 +154,9 @@ export class AzureHealthAdapter implements MedicalNlpAdapter {
   private readonly pollIntervalMs: number;
   private readonly maxPollMs: number;
   private readonly fetchImpl?: typeof fetch;
+  private readonly maxRetries: number;
+  private readonly retryBaseDelayMs: number;
+  private readonly maxRetryDelayMs: number;
 
   constructor(config: AzureHealthAdapterConfig) {
     this.endpoint = (config.endpoint ?? '').trim().replace(/\/+$/, '');
@@ -142,6 +168,9 @@ export class AzureHealthAdapter implements MedicalNlpAdapter {
     this.pollIntervalMs = config.pollIntervalMs ?? 1000;
     this.maxPollMs = config.maxPollMs ?? 60_000;
     this.fetchImpl = config.fetch;
+    this.maxRetries = nonNegative(config.maxRetries, 4, true);
+    this.retryBaseDelayMs = nonNegative(config.retryBaseDelayMs, 1000);
+    this.maxRetryDelayMs = nonNegative(config.maxRetryDelayMs, 30_000);
   }
 
   /**
@@ -193,10 +222,11 @@ export class AzureHealthAdapter implements MedicalNlpAdapter {
     const failedDocs: string[] = [];
     let modelVersion: string | undefined;
     let docIndex = 0;
+    const retry: RetryState = { retries: 0 };
 
     for (const batch of batches) {
       const docs = batch.map((seg) => ({ seg, id: String(docIndex++) }));
-      const results = await this.runJob(docs, language, signal);
+      const results = await this.runJob(docs, language, signal, retry);
       modelVersion = results.modelVersion ?? modelVersion;
       this.collect(results, docs, entities, relations, warnings, failedDocs);
     }
@@ -216,6 +246,7 @@ export class AzureHealthAdapter implements MedicalNlpAdapter {
         ...(modelVersion ? { modelVersion } : {}),
         documents: segments.length,
         jobs: batches.length,
+        retries: retry.retries,
       },
     };
   }
@@ -319,7 +350,8 @@ export class AzureHealthAdapter implements MedicalNlpAdapter {
   private async runJob(
     docs: { seg: TextSegment; id: string }[],
     language: string,
-    signal: AbortSignal | undefined
+    signal: AbortSignal | undefined,
+    retry: RetryState
   ): Promise<AzureHealthcareResults> {
     const url = `${this.endpoint}/language/analyze-text/jobs?api-version=${encodeURIComponent(this.apiVersion)}`;
     const body = {
@@ -336,12 +368,18 @@ export class AzureHealthAdapter implements MedicalNlpAdapter {
       ],
     };
 
-    const submit = await this.fetchFn(url, {
-      method: 'POST',
-      headers: await this.headers(true),
-      body: JSON.stringify(body),
+    const payload = JSON.stringify(body);
+    // Submitting a job is not idempotent. A 429/5xx response means the job
+    // was not accepted, so retrying it is safe. A network error may hide a
+    // job that was accepted; it is retried anyway, so the worst case is a
+    // duplicate (billed) job whose results are never read.
+    const submit = await this.fetchWithRetry(
+      'submit',
+      async () => ({ method: 'POST', headers: await this.headers(true), body: payload, signal }),
+      url,
       signal,
-    });
+      retry
+    );
     if (!submit.ok) throw await httpError('submit', submit);
     const location = submit.headers.get('operation-location');
     if (!location) {
@@ -358,17 +396,18 @@ export class AzureHealthAdapter implements MedicalNlpAdapter {
     for (;;) {
       const remaining = deadline - Date.now();
       if (remaining <= 0) {
-        throw new AzureHealthError(`Azure health job did not finish within ${this.maxPollMs} ms`, {
-          code: 'PollTimeout',
-        });
+        throw pollTimeout(this.maxPollMs);
       }
       await sleep(Math.min(wait, remaining), signal);
 
-      const poll = await this.fetchFn(location, {
-        method: 'GET',
-        headers: await this.headers(false),
+      const poll = await this.fetchWithRetry(
+        'status',
+        async () => ({ method: 'GET', headers: await this.headers(false), signal }),
+        location,
         signal,
-      });
+        retry,
+        deadline
+      );
       if (!poll.ok) throw await httpError('status', poll);
       const state = (await poll.json()) as AzureJobState;
       wait = retryAfterMs(poll.headers) ?? this.pollIntervalMs;
@@ -396,6 +435,60 @@ export class AzureHealthAdapter implements MedicalNlpAdapter {
           break;
       }
     }
+  }
+
+  /**
+   * fetch with retries on HTTP 429/500/502/503/504 and network errors.
+   * `init` is rebuilt per attempt so credentials (getToken) are fresh. When
+   * `deadline` is given, a retry wait that would pass it fails with the
+   * PollTimeout error instead. Returns the response of the last attempt for
+   * non-retryable statuses (the caller handles !ok); throws when retries are
+   * exhausted.
+   */
+  private async fetchWithRetry(
+    stage: 'submit' | 'status',
+    init: () => Promise<RequestInit>,
+    url: string,
+    signal: AbortSignal | undefined,
+    retry: RetryState,
+    deadline?: number
+  ): Promise<Response> {
+    for (let attempt = 0; ; attempt++) {
+      throwIfAborted(signal);
+      const fetchFn = this.fetchFn;
+      const requestInit = await init();
+      const last = attempt >= this.maxRetries;
+      let delay: number;
+      try {
+        const res = await fetchFn(url, requestInit);
+        if (res.ok || !RETRYABLE_STATUSES.has(res.status)) return res;
+        if (last) throw await httpError(stage, res, attempt + 1);
+        delay = retryHeaderMs(res.headers) ?? this.backoffMs(attempt);
+        // Release the body before waiting
+        await res.text().catch(() => undefined);
+      } catch (err) {
+        if (err instanceof AzureHealthError || signal?.aborted || isAbortError(err)) throw err;
+        if (last) {
+          throw new AzureHealthError(
+            `Azure health ${stage} request failed with a network error after ${attempt + 1} attempt${attempt ? 's' : ''}`,
+            { code: 'NetworkError', cause: err }
+          );
+        }
+        delay = this.backoffMs(attempt);
+      }
+      delay = Math.min(delay, this.maxRetryDelayMs);
+      if (deadline !== undefined && Date.now() + delay >= deadline) {
+        throw pollTimeout(this.maxPollMs);
+      }
+      retry.retries++;
+      await sleep(delay, signal);
+    }
+  }
+
+  /** Exponential backoff with full jitter, capped at maxRetryDelayMs */
+  private backoffMs(attempt: number): number {
+    const ceiling = Math.min(this.maxRetryDelayMs, this.retryBaseDelayMs * 2 ** attempt);
+    return Math.floor(Math.random() * ceiling);
   }
 
   /**
@@ -436,8 +529,40 @@ function jobErrors(state: AzureJobState): string {
   return errs.length ? `: ${errs.map(describeError).join('; ')}` : '';
 }
 
-/** Build an error from a non-2xx response; uses only status and Azure's error body */
-async function httpError(stage: 'submit' | 'status', res: Response): Promise<AzureHealthError> {
+function pollTimeout(maxPollMs: number): AzureHealthError {
+  return new AzureHealthError(`Azure health job did not finish within ${maxPollMs} ms`, { code: 'PollTimeout' });
+}
+
+/** A finite number >= 0 (optionally an integer), else the default */
+function nonNegative(value: number | undefined, fallback: number, integer = false): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return fallback;
+  return integer ? Math.floor(value) : value;
+}
+
+function isAbortError(err: unknown): boolean {
+  const name = (err as { name?: unknown } | null)?.name;
+  return name === 'AbortError' || name === 'TimeoutError';
+}
+
+/**
+ * Server-requested retry delay in milliseconds: `retry-after-ms` or
+ * `x-ms-retry-after-ms`, else `Retry-After` (seconds or HTTP date).
+ */
+function retryHeaderMs(headers: Headers): number | undefined {
+  for (const name of ['retry-after-ms', 'x-ms-retry-after-ms']) {
+    const value = headers.get(name);
+    if (value === null || value.trim() === '') continue;
+    const ms = Number(value);
+    if (Number.isFinite(ms) && ms >= 0) return ms;
+  }
+  return retryAfterMs(headers);
+}
+
+/**
+ * Build an error from a non-2xx response; uses only status and Azure's error
+ * body. `attempts` (when > 1) is the number of attempts made before giving up.
+ */
+async function httpError(stage: 'submit' | 'status', res: Response, attempts = 1): Promise<AzureHealthError> {
   let error: AzureError | undefined;
   try {
     const body = (await res.json()) as AzureErrorResponse;
@@ -446,7 +571,9 @@ async function httpError(stage: 'submit' | 'status', res: Response): Promise<Azu
     error = undefined;
   }
   const detail = error ? `: ${describeError(error)}` : '';
-  return new AzureHealthError(`Azure health ${stage} request failed with HTTP ${res.status}${detail}`, {
+  const what = res.status === 429 ? 'was rate limited (HTTP 429)' : `failed with HTTP ${res.status}`;
+  const tries = attempts > 1 ? ` after ${attempts} attempts` : '';
+  return new AzureHealthError(`Azure health ${stage} request ${what}${tries}${detail}`, {
     status: res.status,
     code: error?.code,
   });
