@@ -1,4 +1,4 @@
-# Second-opinion model adapters for `@meddevkit/crisis-screen` (SPEC Q7)
+# Second-opinion model adapters for `@meddevkit/crisis-signals` (SPEC Q7)
 
 Research date: 2026-10-18. This note answers SPEC §11 **Q7**: should the
 screen offer optional adapters for model-based classifiers? It covers what
@@ -513,14 +513,14 @@ dependency and hundreds of MB, and buys a score with no explanation.
 
 ## Proposed adapter interface
 
-The types and a pure combiner go in `@meddevkit/crisis-screen`. They add no
+The types and a pure combiner go in `@meddevkit/crisis-signals`. They add no
 dependencies and make no network calls, so SPEC §1's non-goal still holds
 for the core. Each provider lives in its own package, mirroring
 `@meddevkit/adapter-azure`: `fetch` only, no SDK, works in Node ≥ 18 and
 edge runtimes, injectable `fetch` for tests.
 
 ```ts
-// @meddevkit/crisis-screen (types + combiner only)
+// @meddevkit/crisis-signals (types + combiner only)
 export interface SecondOpinion {
   level: ScreenLevel;                       // provider verdict mapped per the adapter's documented table
   immediacy?: boolean;                      // only if the provider has a timing/imminence signal

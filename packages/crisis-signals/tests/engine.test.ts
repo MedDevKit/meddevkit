@@ -322,7 +322,7 @@ describe('pattern file validation', () => {
       } catch (e) {
         message = (e as Error).message;
       }
-      expect(message).toMatch(/^crisis-screen: (si_active|negated)\.[xy] /);
+      expect(message).toMatch(/^crisis-signals: (si_active|negated)\.[xy] /);
       expect(message).not.toContain('unclosed');
     }
     expect(() => compileData({ version: 1 } as unknown as PatternFile)).toThrow('pattern file is malformed');
@@ -370,9 +370,9 @@ describe('fragments, cores and vetoes (pattern file format)', () => {
         return (e as Error).message;
       }
     });
-    expect(messages[0]).toBe('crisis-screen: distress.x references an unknown fragment');
-    expect(messages[1]).toBe('crisis-screen: A references an unknown fragment');
-    expect(messages[2]).toBe('crisis-screen: fragment A is malformed or duplicated');
+    expect(messages[0]).toBe('crisis-signals: distress.x references an unknown fragment');
+    expect(messages[1]).toBe('crisis-signals: A references an unknown fragment');
+    expect(messages[2]).toBe('crisis-signals: fragment A is malformed or duplicated');
   });
 
   it('the first participating capturing group is the span, so a negation in the frame scopes over it', () => {
@@ -437,7 +437,7 @@ describe('fragments, cores and vetoes (pattern file format)', () => {
           { id: 'idiom.x', modifier: 'idiom', categories: ['nope' as never], pattern: 'x', sources: [], relation: 'informed-by' },
         ],
       }),
-    ).toThrow('crisis-screen: idiom.x names an unknown category');
+    ).toThrow('crisis-signals: idiom.x names an unknown category');
   });
 });
 

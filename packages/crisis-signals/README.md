@@ -1,4 +1,4 @@
-# @meddevkit/crisis-screen
+# @meddevkit/crisis-signals
 
 A keyword-and-context screen for first-person crisis language. It is not a diagnostic or risk-assessment tool, it will miss some expressions of risk, and it must never be the only safeguard. Route any flagged text to a person according to your own escalation policy.
 
@@ -40,7 +40,7 @@ Lifeline) on `crisis`.
 ## Usage
 
 ```ts
-import { screenText } from '@meddevkit/crisis-screen';
+import { screenText } from '@meddevkit/crisis-signals';
 
 const r = screenText('I keep thinking about ending it. Maybe tonight.');
 // r.level      -> 'crisis'
@@ -123,9 +123,9 @@ Context rules worth knowing:
 
 The full pattern list, modifier cues and clause boundaries are open source, so
 you can see exactly what the screen does and does not match:
-[`data/crisis.patterns.json`](https://github.com/MedDevKit/meddevkit/blob/main/packages/crisis-screen/data/crisis.patterns.json).
+[`data/crisis.patterns.json`](https://github.com/MedDevKit/meddevkit/blob/main/packages/crisis-signals/data/crisis.patterns.json).
 The raw file is also shipped in the package as
-`@meddevkit/crisis-screen/patterns.json` for vendoring into other runtimes.
+`@meddevkit/crisis-signals/patterns.json` for vendoring into other runtimes.
 
 ### Pattern file format
 
@@ -189,16 +189,16 @@ splitting is structural and lives in code.
 ### Metrics
 
 ```bash
-pnpm --filter @meddevkit/crisis-screen build
-pnpm --filter @meddevkit/crisis-screen metrics        # SPEC §8 metrics on data/vectors.jsonl
-node packages/crisis-screen/scripts/metrics.mjs <file.jsonl>
+pnpm --filter @meddevkit/crisis-signals build
+pnpm --filter @meddevkit/crisis-signals metrics        # SPEC §8 metrics on data/vectors.jsonl
+node packages/crisis-signals/scripts/metrics.mjs <file.jsonl>
 ```
 
 Published metrics: to be published after the held-out evaluation and clinical
 review.
 
 Design and evaluation plan:
-[SPEC.md](https://github.com/MedDevKit/meddevkit/blob/main/docs/specs/crisis-screen/SPEC.md).
+[SPEC.md](https://github.com/MedDevKit/meddevkit/blob/main/docs/specs/crisis-signals/SPEC.md).
 Third-party attributions: [NOTICE](./NOTICE).
 
 ## License

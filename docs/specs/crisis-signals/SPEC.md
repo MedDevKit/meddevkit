@@ -1,7 +1,7 @@
 # Crisis-language screen — specification
 
 > **Status:** Draft v0.1 · 2026-10-18 · not reviewed by a clinician
-> **Package:** `@meddevkit/crisis-screen`, a separate package (decided, Q1)
+> **Package:** `@meddevkit/crisis-signals`, a separate package (decided, Q1)
 > **First consumer:** `convint` (Python, `~/Source/AIML/conversational_intelligence`), which replaces its own DISTRESS regexes with this screen
 > **Seed test set:** [`vectors.seed.jsonl`](./vectors.seed.jsonl)
 
@@ -141,7 +141,7 @@ Modifier precedence: `idiom` > `third_party` > (`past` + `resolved`) >
 ### TypeScript
 
 ```ts
-import { screenText } from '@meddevkit/crisis-screen';
+import { screenText } from '@meddevkit/crisis-signals';
 
 const r = screenText("I keep thinking about ending it. Maybe tonight.");
 // {
@@ -338,8 +338,8 @@ recall regression on dev blocks the merge.
 
 ### Decided (owner, 2026-10-18)
 
-- **D1 (was Q1). Separate package: `@meddevkit/crisis-screen`.** It versions
-  and releases on its own tag (`crisis-screen-v<version>`), following the
+- **D1 (was Q1). Separate package: `@meddevkit/crisis-signals`.** It versions
+  and releases on its own tag (`crisis-signals-v<version>`), following the
   existing release flow. The first publish uses `scripts/first-publish.sh`.
 - **D2 (was Q2). Fully public patterns.** The complete crisis pattern list,
   modifier cues and test vectors are open source. This is an explicit
@@ -369,7 +369,7 @@ recall regression on dev blocks the merge.
   `@meddevkit/crisis-adapter-nope` (self-hosted nope-edge) first, then
   `@meddevkit/crisis-adapter-openai`. v1 ships only the offline screen.
 - **D7 (2026-10-18). Package layout.**
-  - Data lives in `packages/crisis-screen/data/`: `crisis.patterns.json`,
+  - Data lives in `packages/crisis-signals/data/`: `crisis.patterns.json`,
     `vectors.jsonl` and `vectors.heldout.jsonl`.
   - The pattern JSON is bundled into the build and also shipped raw in the
     npm package, so consumers can vendor it.

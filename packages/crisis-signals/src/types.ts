@@ -1,6 +1,6 @@
 /**
- * Public types for @meddevkit/crisis-screen.
- * See docs/specs/crisis-screen/SPEC.md §4 (output model), §5 (API) and §6 (pattern data).
+ * Public types for @meddevkit/crisis-signals.
+ * See docs/specs/crisis-signals/SPEC.md §4 (output model), §5 (API) and §6 (pattern data).
  */
 
 /**

@@ -19,7 +19,7 @@ if (!file) {
   process.exit(2);
 }
 if (!existsSync(distEntry)) {
-  console.error('dist/ not found: run `pnpm --filter @meddevkit/crisis-screen build` first');
+  console.error('dist/ not found: run `pnpm --filter @meddevkit/crisis-signals build` first');
   process.exit(2);
 }
 const { screenText, PATTERNS_VERSION } = await import(distEntry);
@@ -100,7 +100,7 @@ const metrics = [
 
 const pct = (x) => (Number.isNaN(x) ? '  n/a' : `${(100 * x).toFixed(1).padStart(5)}%`);
 
-console.log(`@meddevkit/crisis-screen metrics  (patterns ${PATTERNS_VERSION}, ${vectors.length} vectors)`);
+console.log(`@meddevkit/crisis-signals metrics  (patterns ${PATTERNS_VERSION}, ${vectors.length} vectors)`);
 console.log(`file: ${file}\n`);
 for (const m of metrics) {
   const n = m.pool.length;

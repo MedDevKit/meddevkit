@@ -23,12 +23,12 @@ export interface Span {
 export function compilePattern(id: string, source: string, flags: string | undefined, indices = false): RegExp {
   const f = flags ?? '';
   if (f !== '' && f !== 'i') {
-    throw new Error(`crisis-screen: ${id} uses unsupported flags; only "i" is allowed`);
+    throw new Error(`crisis-signals: ${id} uses unsupported flags; only "i" is allowed`);
   }
   try {
     return new RegExp(source, `${f}gu${indices ? 'd' : ''}`);
   } catch {
-    throw new Error(`crisis-screen: ${id} does not compile`);
+    throw new Error(`crisis-signals: ${id} does not compile`);
   }
 }
 

@@ -53,15 +53,15 @@ function immediacyActive(mods: ModifierState, suppressIdioms: boolean): boolean 
 /** Validate arguments (messages never include text) and return `suppressIdioms`. */
 function readOptions(text: unknown, options: unknown): boolean {
   if (typeof text !== 'string') {
-    throw new TypeError('crisis-screen: screenText expects a string');
+    throw new TypeError('crisis-signals: screenText expects a string');
   }
   if (options === undefined || options === null) return true;
   if (typeof options !== 'object') {
-    throw new TypeError('crisis-screen: options must be an object');
+    throw new TypeError('crisis-signals: options must be an object');
   }
   const suppress = (options as ScreenOptions).suppressIdioms;
   if (suppress !== undefined && typeof suppress !== 'boolean') {
-    throw new TypeError('crisis-screen: options.suppressIdioms must be a boolean');
+    throw new TypeError('crisis-signals: options.suppressIdioms must be a boolean');
   }
   return suppress ?? true;
 }

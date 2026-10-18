@@ -1,4 +1,4 @@
-# Real-world datasets for evaluating `@meddevkit/crisis-screen` (evaluation only)
+# Real-world datasets for evaluating `@meddevkit/crisis-signals` (evaluation only)
 
 Research date: 2026-10-18. Scope: annotated real-world datasets that could be
 used to **evaluate** the screen locally and privately, reporting only aggregate
@@ -287,7 +287,7 @@ metrics is allowed; UMD only with an IRB partner.
 ### Handling rules
 
 - **Local only.** Store data outside the repository (for example
-  `~/.meddevkit-eval/crisis-screen/`), pointed to by an environment variable
+  `~/.meddevkit-eval/crisis-signals/`), pointed to by an environment variable
   such as `CRISIS_SCREEN_EVAL_DIR`. If a repo-relative path is ever used, add
   it to `.gitignore` first (for example `eval/private/`) and add a CI check
   that fails if any file under it is tracked.
