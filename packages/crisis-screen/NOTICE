@@ -1,0 +1,48 @@
+@meddevkit/crisis-screen
+Licensed under the MIT License; see LICENSE for the copyright notice.
+
+This package contains patterns informed by or adapted from the third-party
+sources listed below. Each pattern in data/crisis.patterns.json names its
+sources by the keys used here (the `sources` field) and states its `relation`
+(`informed-by`: our own wording; `adapted-from`: close to the source's wording,
+so the source's licence terms apply).
+
+Listing a source does not imply that its authors, their institutions or NIMH
+endorse this package.
+
+-------------------------------------------------------------------------------
+srl-v1.0  Suicide Risk Lexicon v1.0
+-------------------------------------------------------------------------------
+
+Contains material adapted from the Suicide Risk Lexicon v1.0
+(construct-tracker, (c) Daniel M. Low and contributors, Apache-2.0).
+Low DM, Rankin O, Coppersmith DDL, Bentley KH, Nock MK, Ghosh SS (2026),
+J Psychopathol Clin Sci, doi:10.1037/abn0001152.
+
+Source: https://github.com/danielmlow/construct-tracker
+Licence: Apache License, Version 2.0
+         https://www.apache.org/licenses/LICENSE-2.0
+
+Change notice (Apache-2.0 section 4(b)): lexicon terms were used as vocabulary
+for regular-expression patterns written for this package and were modified
+(reworded, framed and combined). Changes: [TODO: summarize per release, e.g.
+"0.1.0: patterns <ids> adapted from SRL constructs <names>"].
+
+[TODO: include the full Apache-2.0 licence text with the package (section
+4(a)) before any pattern with source srl-v1.0 ships, and retain any
+attribution notices the upstream authors specify. The upstream repository has
+no NOTICE file and no filled-in copyright line as of 2026-10-18.]
+
+-------------------------------------------------------------------------------
+nimh-asq  NIMH Ask Suicide-Screening Questions (ASQ) and Warning Signs of Suicide
+-------------------------------------------------------------------------------
+
+Wording informed by the National Institute of Mental Health (NIMH):
+- ASQ Suicide Risk Screening Tool, described by NIMH as a "public domain
+  tool, free of charge".
+  https://www.nimh.nih.gov/research/research-conducted-at-nimh/asq-toolkit-materials
+- Warning Signs of Suicide. NIMH states the information is in the public
+  domain and may be reused without permission (images excluded; none are used).
+  https://www.nimh.nih.gov/health/publications/warning-signs-of-suicide
+
+Source: National Institute of Mental Health. US public domain.

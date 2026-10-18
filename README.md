@@ -344,6 +344,7 @@ Contact us about **MedDevKit Cloud** or consulting services.
 |---------|-------------|--------|
 | [@meddevkit/chunker](https://github.com/MedDevKit/meddevkit/tree/main/packages/chunker) | PHI-aware medical text chunker with plugin system | Available |
 | [@meddevkit/adapter-azure](https://github.com/MedDevKit/meddevkit/tree/main/packages/adapter-azure) | Azure Text Analytics for health provider adapter | Available |
+| [@meddevkit/crisis-screen](https://github.com/MedDevKit/meddevkit/tree/main/packages/crisis-screen) | First-person crisis-language screen | In development, unreviewed |
 | @meddevkit/terminology | Medical term normalizer | Coming soon |
 | @meddevkit/retrieval | Cascading medical retrieval | Coming soon |
 

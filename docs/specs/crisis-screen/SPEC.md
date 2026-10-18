@@ -104,6 +104,28 @@ Modifier precedence: `idiom` > `third_party` > (`past` + `resolved`) >
 `negated` / `hypothetical` / `quoted`. When modifiers conflict, choose the
 **higher** resulting level.
 
+### Clarifications (owner, 2026-10-18, from M0 vector writing)
+
+- **Recent past is present.** Anchors within about the last few days
+  ("last night", "yesterday", "this morning", "earlier today", "this week")
+  do not set `past`. Recent self-harm or ideation stays `crisis`. `past`
+  needs a distant anchor ("years ago", "back then", "when I was nineteen",
+  "used to", "last year").
+- **A first-person conditional is not hypothetical.** "If things don't get
+  better I might end my life" stays `crisis`. `hypothetical` covers
+  questions, "what if", and asking about others or about procedure ("how do
+  people know if…", "would you have to report it if…").
+- **Order of application.** Modifier precedence picks the **one** modifier
+  that sets a finding's level. "Choose the higher level" applies only when
+  modifiers of equal rank conflict. The text's level is the maximum over
+  findings, so the writer's own unmodified statement still wins over a
+  third-party or idiom finding elsewhere in the text.
+- **Negated acute distress** ("I'm not panicking") → `none`, with the finding
+  kept and `negated` set.
+- **The bare word "suicidal"** in a first-person frame ("I feel suicidal",
+  "I've been suicidal") counts as `suicidal_ideation_passive`.
+- **Immediacy** is set only when a non-negated `crisis` finding is present.
+
 ## 5. API
 
 ### TypeScript

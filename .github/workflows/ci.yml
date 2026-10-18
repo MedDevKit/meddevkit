@@ -27,6 +27,7 @@ jobs:
         run: |
           cmp README.md packages/chunker/README.md || { echo "::error::packages/chunker/README.md differs from README.md; copy it over"; exit 1; }
           cmp LICENSE packages/chunker/LICENSE || { echo "::error::packages/chunker/LICENSE differs from LICENSE; copy it over"; exit 1; }
+          cmp LICENSE packages/crisis-screen/LICENSE || { echo "::error::packages/crisis-screen/LICENSE differs from LICENSE; copy it over"; exit 1; }
 
       - name: Lint
         run: pnpm lint

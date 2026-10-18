@@ -1,0 +1,65 @@
+{
+  "name": "@meddevkit/crisis-screen",
+  "version": "0.1.0",
+  "description": "Offline keyword-and-context screen for first-person crisis language (unreviewed; not a diagnostic or risk-assessment tool)",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./patterns.json": "./data/crisis.patterns.json"
+  },
+  "files": [
+    "dist",
+    "data/crisis.patterns.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "crisis",
+    "suicide-prevention",
+    "safety",
+    "screening",
+    "nlp",
+    "meddevkit"
+  ],
+  "author": "Lyndon Hughey",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MedDevKit/meddevkit.git",
+    "directory": "packages/crisis-screen"
+  },
+  "homepage": "https://meddevkit.github.io/meddevkit/",
+  "bugs": {
+    "url": "https://github.com/meddevkit/meddevkit/issues"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.56.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
