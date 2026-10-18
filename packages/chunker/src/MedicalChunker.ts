@@ -597,6 +597,18 @@ export class MedicalChunker {
 
   /**
    * Main chunking algorithm
+   *
+   * Chunk core ranges tile the text in order (each chunk's boundaries.start
+   * is the previous chunk's boundaries.end), so no text is dropped.
+   *
+   * A range whose text estimates below minTokens is not emitted on its own
+   * unless it reaches the end of the text. Its start is kept and the chunk
+   * is extended into the following text: the split point is searched again
+   * from that start, within the same maxTokens character budget, past the
+   * short range. This repeats while the chunk is still short. When no
+   * extension fits (no split point past the short range within the budget,
+   * or the extended text would estimate above maxTokens), the short range
+   * is emitted as an undersized chunk instead.
    */
   private performChunking(
     text: string,
@@ -607,59 +619,138 @@ export class MedicalChunker {
   ): MedicalChunk[] {
     const chunks: MedicalChunk[] = [];
     const maxChars = estimateCharsForTokens(this.config.maxTokens);
+    // Start of the chunk being built
+    let chunkStart = 0;
+    // End of the text covered so far; > chunkStart while a short range is
+    // being extended
     let position = 0;
-    let chunkIndex = 0;
+    // Split reason of the short range being extended (null when none)
+    let pendingReason: SplitReason | null = null;
+
+    const emit = (
+      start: number,
+      end: number,
+      reason: SplitReason,
+      content: ReturnType<MedicalChunker['buildChunkContent']>
+    ): void => {
+      // A whitespace-only range carries no text
+      if (content.text.length === 0) return;
+      const chunkIndex = chunks.length;
+      chunks.push({
+        text: content.text,
+        id: this.generateChunkId(chunkIndex),
+        index: chunkIndex,
+        hasPhi: content.hasPhi,
+        phiMarkers: content.phiMarkers,
+        boundaries: {
+          start,
+          end,
+          splitReason: reason,
+        },
+        metadata: {
+          ...content.metadata,
+          // Section at the chunk start, also for merged short ranges
+          section: getSectionAtPosition(sections, start),
+        },
+      });
+    };
+
+    // Chunk text starts at the first non-whitespace character
+    const contentFor = (
+      start: number,
+      end: number
+    ): ReturnType<MedicalChunker['buildChunkContent']> =>
+      this.buildChunkContent(
+        text,
+        this.skipWhitespace(text, start, end),
+        end,
+        detections
+      );
 
     while (position < text.length) {
-      // Determine ideal end position based on tokens
-      const idealEnd = Math.min(position + maxChars, text.length);
+      // Ideal end based on tokens, measured from the chunk start
+      const idealEnd = Math.min(chunkStart + maxChars, text.length);
+
+      if (pendingReason !== null) {
+        // Extending a short range: only split points past it count
+        const extension =
+          idealEnd > position
+            ? this.findChunkEnd(
+                text,
+                chunkStart,
+                idealEnd,
+                sectionBoundaries.filter((b) => b > position),
+                protectedRanges
+              )
+            : null;
+        const extended =
+          extension !== null && extension.end > position
+            ? contentFor(chunkStart, extension.end)
+            : null;
+
+        if (
+          extension === null ||
+          extended === null ||
+          extended.metadata.tokenCount > this.config.maxTokens
+        ) {
+          // No merge fits within maxTokens: emit the short range as is
+          emit(
+            chunkStart,
+            position,
+            pendingReason,
+            contentFor(chunkStart, position)
+          );
+          chunkStart = position;
+          pendingReason = null;
+          continue;
+        }
+
+        position = extension.end;
+        if (
+          extended.metadata.tokenCount < this.config.minTokens &&
+          position < text.length
+        ) {
+          pendingReason = extension.reason;
+          continue;
+        }
+        emit(chunkStart, position, extension.reason, extended);
+        chunkStart = position;
+        pendingReason = null;
+        continue;
+      }
 
       // Find best split point
-      const { end, reason } = this.findChunkEnd(
+      const split = this.findChunkEnd(
         text,
         position,
         idealEnd,
         sectionBoundaries,
         protectedRanges
       );
+      // Always make progress
+      const { end, reason } =
+        split.end > position
+          ? split
+          : { end: idealEnd, reason: 'max_tokens' as SplitReason };
 
-      // Chunk text starts at the first non-whitespace character
-      const textStart = this.skipWhitespace(text, position, end);
-      const content = this.buildChunkContent(text, textStart, end, detections);
+      const content = contentFor(position, end);
+      position = end;
 
-      if (content.text.length > 0) {
-        // Check minimum tokens
-        if (
-          content.metadata.tokenCount >= this.config.minTokens ||
-          end >= text.length
-        ) {
-          // Determine section for this chunk
-          const section = getSectionAtPosition(sections, position);
-
-          chunks.push({
-            text: content.text,
-            id: this.generateChunkId(chunkIndex),
-            index: chunkIndex,
-            hasPhi: content.hasPhi,
-            phiMarkers: content.phiMarkers,
-            boundaries: {
-              start: position,
-              end,
-              splitReason: reason,
-            },
-            metadata: {
-              ...content.metadata,
-              section,
-            },
-          });
-
-          chunkIndex++;
-        }
+      if (
+        content.metadata.tokenCount < this.config.minTokens &&
+        end < text.length
+      ) {
+        // Too short: keep chunkStart and extend into the following text
+        pendingReason = reason;
+        continue;
       }
 
-      position = end;
+      emit(chunkStart, end, reason, content);
+      chunkStart = end;
     }
 
+    // The loop never ends while extending: a short range reaching the end
+    // of the text is emitted, and a failed extension emits and continues.
     return chunks;
   }
 

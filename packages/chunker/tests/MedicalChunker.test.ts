@@ -1,12 +1,131 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { MedicalChunker } from '../src/MedicalChunker';
+import { normalizeText } from '../src/utils';
+import { estimateTokens } from '../src/tokenizer';
+import type { MedicalChunk, MedicalChunkerConfig } from '../src/types';
 import {
   SIMPLE_NOTE,
   NOTE_WITH_PHI,
   LONG_NOTE,
   NOTE_WITH_NEGATIONS,
   NOTE_WITH_MEDICATIONS,
+  VITALS_VARIATIONS,
 } from './fixtures/sample-notes';
+
+// ============================================================================
+// Coverage helpers (no text may be lost between chunks)
+// ============================================================================
+
+const nonWs = (s: string): string => s.replace(/\s+/g, '');
+
+/**
+ * Non-whitespace text of a chunk's core (chunk.text minus its overlap
+ * prefix), taken from chunk.text itself
+ */
+function coreNonWs(normalized: string, chunk: MedicalChunk): string {
+  const text = nonWs(chunk.text);
+  const { overlapStart, start } = chunk.boundaries;
+  if (overlapStart === undefined) return text;
+  const overlap = nonWs(normalized.slice(overlapStart, start));
+  expect(text.startsWith(overlap)).toBe(true);
+  return text.slice(overlap.length);
+}
+
+/**
+ * Chunk cores tile the normalized text in order, their concatenation holds
+ * every non-whitespace character, and ids/indexes are sequential
+ */
+function expectFullCoverage(raw: string, config: MedicalChunkerConfig): MedicalChunk[] {
+  const normalized = normalizeText(raw);
+  const { chunks } = new MedicalChunker(config).chunk(raw);
+  const label = JSON.stringify(config);
+
+  expect(chunks.length, label).toBeGreaterThan(0);
+  expect(chunks[0].boundaries.start, label).toBe(0);
+  expect(chunks[chunks.length - 1].boundaries.end, label).toBe(normalized.length);
+  chunks.forEach((chunk, i) => {
+    expect(chunk.index, label).toBe(i);
+    expect(chunk.id.startsWith(`chunk_${i}_`), label).toBe(true);
+    if (i > 0) {
+      expect(chunk.boundaries.start, `${label} chunk ${i}`).toBe(
+        chunks[i - 1].boundaries.end
+      );
+    }
+    for (const m of chunk.phiMarkers) {
+      expect(m.startOffset, label).toBeGreaterThanOrEqual(0);
+      expect(m.endOffset, label).toBeLessThanOrEqual(chunk.text.length);
+    }
+  });
+  expect(chunks.map((c) => coreNonWs(normalized, c)).join(''), label).toBe(
+    nonWs(normalized)
+  );
+  return chunks;
+}
+
+/** Synthetic note: a one-line ALLERGIES section between two long sections */
+const SHORT_SECTION_NOTE = `HISTORY OF PRESENT ILLNESS:
+Mr. Doe is a 58-year-old man who presents with two weeks of intermittent substernal chest pressure. The pressure is brought on by climbing stairs and resolves with rest within five minutes. He reports mild dyspnea on exertion but no syncope. He has a history of hypertension and hyperlipidemia. He quit smoking ten years ago. His father had a myocardial infarction at age 60. He has been taking his medications as prescribed and checks his blood pressure at home most mornings.
+
+ALLERGIES: NKDA.
+
+PHYSICAL EXAM:
+Vitals: BP 142/88 mmHg, HR 78 bpm, RR 16, T 98.4°F, O2 sat 97% on room air. General: well appearing, in no acute distress. Neck: no jugular venous distension. Cardiac: regular rate and rhythm, no murmurs, rubs or gallops. Lungs: clear to auscultation bilaterally without wheezes or crackles. Extremities: no edema, distal pulses intact and symmetric. Neuro: alert and oriented, no focal deficits noted on exam today.`;
+
+/** Small deterministic PRNG (mulberry32) for generated notes */
+function rng(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const GEN_HEADERS = [
+  'CHIEF COMPLAINT:',
+  'HISTORY OF PRESENT ILLNESS:',
+  'ALLERGIES:',
+  'MEDICATIONS:',
+  'SOCIAL HISTORY:',
+  'REVIEW OF SYSTEMS:',
+  'PHYSICAL EXAM:',
+  'RESULTS:',
+  'ASSESSMENT:',
+  'PLAN:',
+];
+const GEN_SENTENCES = [
+  'NKDA.',
+  'Denies fever or chills.',
+  'BP 128/82 mmHg, HR 72 bpm, O2 sat 98%.',
+  'Metoprolol 25 mg PO BID.',
+  'Lisinopril 10 mg daily.',
+  'Patient reports intermittent chest pain for three days.',
+  'No shortness of breath, nausea or diaphoresis.',
+  'Lungs clear to auscultation bilaterally.',
+  'Follow up in two weeks or sooner if symptoms worsen.',
+  'Seen on 03/14/2024, MRN: 12345678.',
+  'Abdomen soft, nontender, nondistended, normal bowel sounds in all quadrants.',
+];
+
+/** Generated note: random sections, some a single short sentence */
+function generateNote(seed: number): string {
+  const rand = rng(seed);
+  const pick = <T>(list: T[]): T => list[Math.floor(rand() * list.length)];
+  const sections: string[] = [];
+  const sectionCount = 3 + Math.floor(rand() * 8);
+  for (let s = 0; s < sectionCount; s++) {
+    // About a third of sections hold a single sentence
+    const sentenceCount = rand() < 0.35 ? 1 : 2 + Math.floor(rand() * 12);
+    const body = Array.from({ length: sentenceCount }, () => pick(GEN_SENTENCES));
+    const sep = rand() < 0.5 ? ' ' : '\n';
+    sections.push(`${pick(GEN_HEADERS)}${sep}${body.join(rand() < 0.7 ? ' ' : '\n')}`);
+  }
+  return sections.join(rand() < 0.5 ? '\n\n' : '\n');
+}
 
 describe('MedicalChunker', () => {
   describe('Basic Chunking', () => {
@@ -405,6 +524,101 @@ describe('MedicalChunker', () => {
       result.chunks.forEach((chunk, index) => {
         expect(chunk.index).toBe(index);
       });
+    });
+  });
+
+  describe('Short ranges below minTokens', () => {
+    it('keeps a short section between two long sections at every maxTokens', () => {
+      const normalized = normalizeText(SHORT_SECTION_NOTE);
+      const allergiesStart = normalized.indexOf('ALLERGIES');
+
+      for (const maxTokens of [50, 64, 80, 100, 128, 200, 256, 512]) {
+        for (const overlapTokens of [0, 20]) {
+          const config = { maxTokens, minTokens: Math.min(50, maxTokens), overlapTokens };
+          const chunks = expectFullCoverage(SHORT_SECTION_NOTE, config);
+          const label = JSON.stringify(config);
+
+          // "NKDA." is in exactly one chunk core
+          const holders = chunks.filter((c) => coreNonWs(normalized, c).includes('NKDA.'));
+          expect(holders, label).toHaveLength(1);
+
+          // The chunk holding ALLERGIES reports the section at its start
+          const holder = holders[0];
+          const expected = holder.boundaries.start >= allergiesStart ? 'allergies' : 'hpi';
+          expect(holder.metadata.section?.type, label).toBe(expected);
+
+          // Vitals are never split; cores stay within maxTokens
+          expect(
+            chunks.some((c) => c.text.includes('BP 142/88 mmHg')),
+            label
+          ).toBe(true);
+          for (const c of chunks) {
+            const core = normalized.slice(c.boundaries.start, c.boundaries.end).trim();
+            expect(estimateTokens(core), label).toBeLessThanOrEqual(maxTokens);
+          }
+        }
+      }
+    });
+
+    it('extends a short range ending at a section boundary into the next section', () => {
+      // At maxTokens 60 the range from the last HPI sentence to the PHYSICAL
+      // EXAM boundary ("He has been taking ... ALLERGIES: NKDA.") estimates
+      // below minTokens 40. It used to be dropped; it now extends into the
+      // physical exam, up to the next sentence split within maxTokens.
+      const normalized = normalizeText(SHORT_SECTION_NOTE);
+      const chunks = expectFullCoverage(SHORT_SECTION_NOTE, {
+        maxTokens: 60,
+        minTokens: 40,
+        overlapTokens: 0,
+      });
+      const holder = chunks.find((c) => c.text.includes('ALLERGIES: NKDA.'))!;
+
+      expect(holder.text.startsWith('He has been taking his medications')).toBe(true);
+      expect(holder.text).toContain('PHYSICAL EXAM:\nVitals: BP 142/88 mmHg');
+      expect(holder.boundaries.splitReason).toBe('sentence');
+      expect(holder.metadata.tokenCount).toBeGreaterThanOrEqual(40);
+      expect(holder.metadata.tokenCount).toBeLessThanOrEqual(60);
+      // Section at the chunk start
+      expect(holder.metadata.section?.type).toBe('hpi');
+      // Offsets still map back into the normalized text
+      expect(
+        normalized.slice(holder.boundaries.start, holder.boundaries.end).trim()
+      ).toBe(holder.text);
+      const bp = holder.metadata.vitals!.find((v) => v.raw.startsWith('BP'))!;
+      expect(
+        normalized.slice(
+          holder.boundaries.start + bp.startOffset,
+          holder.boundaries.start + bp.endOffset
+        )
+      ).toBe(bp.raw);
+    });
+
+    it('loses no text for any maxTokens/minTokens combination (fixtures and generated notes)', () => {
+      const aciDir = join(__dirname, 'fixtures', 'aci-bench');
+      const notes: string[] = [
+        ...['D2N011', 'D2N035', 'D2N041', 'D2N062'].map((id) =>
+          readFileSync(join(aciDir, `${id}.txt`), 'utf8')
+        ),
+        SIMPLE_NOTE,
+        NOTE_WITH_PHI,
+        LONG_NOTE,
+        NOTE_WITH_NEGATIONS,
+        NOTE_WITH_MEDICATIONS,
+        VITALS_VARIATIONS,
+        SHORT_SECTION_NOTE,
+        ...Array.from({ length: 25 }, (_, seed) => generateNote(seed + 1)),
+      ];
+
+      for (const note of notes) {
+        for (const maxTokens of [10, 16, 30, 50, 64, 128, 256]) {
+          for (const minTokens of [0, 1, 10, 25, 50, 100]) {
+            if (minTokens > maxTokens) continue;
+            for (const overlapTokens of [0, Math.floor(maxTokens / 3)]) {
+              expectFullCoverage(note, { maxTokens, minTokens, overlapTokens, phiDetection: 'basic' });
+            }
+          }
+        }
+      }
     });
   });
 });

@@ -17,87 +17,111 @@ import type { ClinicalSection, ClinicalSectionType } from '../types';
 // ============================================================================
 
 /**
- * Regular expressions for detecting clinical section headers
- * Each section type can have multiple pattern variations
+ * Regular expressions for detecting clinical section headers.
+ * Each section type can have multiple pattern variations.
+ *
+ * Every keyword must END cleanly so that a header keyword is not matched as
+ * the prefix of an ordinary word (e.g. `SH` in "She is well", `PE` in
+ * "Penicillin" or "Peripheral"). Two terminators are used:
+ *
+ * - **Word end** `(?![A-Za-z0-9])`: the keyword is not followed by a letter
+ *   or digit. Used for spelled-out headers and unambiguous abbreviations, so
+ *   "MEDICATIONS ON ADMISSION:" and "HPI/ROS:" still match. (A plain `\b` is
+ *   not used because it fails after dotted forms such as `P.E.`.)
+ * - **Header delimiter** `(?=\s*:|\s+[-–—](?:\s|$)|\s*$)`: the keyword is
+ *   followed by a colon, a spaced dash, or the end of the line. Used for
+ *   tokens that also open ordinary sentences: `PE` (pulmonary embolism, as in
+ *   "PE was ruled out"), and the generic words `SOCIAL` / `HABITS`.
+ * - **Plural header** `(?=(?:[\s/]+[A-Za-z]+){0,2}\s*:|\s+[-–—](?:\s|$)|\s*$)`:
+ *   the header delimiter, but up to two qualifier words may come before the
+ *   colon ("LABORATORIES ON ADMISSION:", "PLANS/RECOMMENDATIONS:"). Used for
+ *   plurals that also open ordinary sentences ("Plans for postpartum care…",
+ *   "X-rays of the right knee were obtained…", "Laboratories drawn at…").
  */
 export const SECTION_PATTERNS: Record<ClinicalSectionType, RegExp[]> = {
   chief_complaint: [
-    /^(?:CHIEF\s+COMPLAINT|CC|C\.C\.|PRESENTING\s+COMPLAINT)[:\s]*/gim,
-    /^(?:REASON\s+FOR\s+(?:VISIT|CONSULTATION))[:\s]*/gim,
+    /^(?:CHIEF\s+COMPLAINTS?|CC|C\.C\.|PRESENTING\s+COMPLAINTS?)(?![A-Za-z0-9])[:\s]*/gim,
+    /^(?:REASON\s+FOR\s+(?:VISIT|CONSULTATION))(?![A-Za-z0-9])[:\s]*/gim,
   ],
 
   hpi: [
-    /^(?:HISTORY\s+OF\s+PRESENT\s+ILLNESS|HPI|H\.P\.I\.)[:\s]*/gim,
-    /^(?:PRESENT\s+ILLNESS|HISTORY\s+OF\s+ILLNESS)[:\s]*/gim,
+    /^(?:HISTORY\s+OF\s+PRESENT\s+ILLNESS|HPI|H\.P\.I\.)(?![A-Za-z0-9])[:\s]*/gim,
+    /^(?:PRESENT\s+ILLNESS|HISTORY\s+OF\s+ILLNESS)(?![A-Za-z0-9])[:\s]*/gim,
   ],
 
   past_medical_history: [
-    /^(?:PAST\s+MEDICAL\s+HISTORY|PMH|P\.M\.H\.|MEDICAL\s+HISTORY)[:\s]*/gim,
-    /^(?:PMHx|PAST\s+HISTORY)[:\s]*/gim,
+    /^(?:PAST\s+MEDICAL\s+HISTORY|PMH|P\.M\.H\.|MEDICAL\s+HISTORY)(?![A-Za-z0-9])[:\s]*/gim,
+    /^(?:PMHx|PAST\s+HISTORY)(?![A-Za-z0-9])[:\s]*/gim,
   ],
 
   past_surgical_history: [
-    /^(?:PAST\s+SURGICAL\s+HISTORY|PSH|P\.S\.H\.|SURGICAL\s+HISTORY)[:\s]*/gim,
-    /^(?:PSHx|PRIOR\s+SURGERIES)[:\s]*/gim,
+    /^(?:PAST\s+SURGICAL\s+HISTORY|PSH|P\.S\.H\.|SURGICAL\s+HISTORY)(?![A-Za-z0-9])[:\s]*/gim,
+    /^(?:PSHx|PRIOR\s+SURGERIES)(?![A-Za-z0-9])[:\s]*/gim,
   ],
 
   medications: [
-    /^(?:MEDICATIONS|MEDS|CURRENT\s+MEDICATIONS|HOME\s+MEDICATIONS)[:\s]*/gim,
-    /^(?:MEDICATION\s+LIST|ACTIVE\s+MEDICATIONS)[:\s]*/gim,
+    /^(?:MEDICATIONS|MEDS|CURRENT\s+MEDICATIONS|HOME\s+MEDICATIONS)(?![A-Za-z0-9])[:\s]*/gim,
+    /^(?:MEDICATION\s+LIST|ACTIVE\s+MEDICATIONS)(?![A-Za-z0-9])[:\s]*/gim,
   ],
 
   allergies: [
-    /^(?:ALLERGIES|DRUG\s+ALLERGIES|ALLERGY|MEDICATION\s+ALLERGIES)[:\s]*/gim,
-    /^(?:NKDA|NKMA|NO\s+KNOWN\s+(?:DRUG\s+)?ALLERGIES)[:\s]*/gim,
+    /^(?:ALLERGIES|DRUG\s+ALLERGIES|ALLERGY|MEDICATION\s+ALLERGIES)(?![A-Za-z0-9])[:\s]*/gim,
+    /^(?:NKDA|NKMA|NO\s+KNOWN\s+(?:DRUG\s+)?ALLERGIES)(?![A-Za-z0-9])[:\s]*/gim,
   ],
 
   family_history: [
-    /^(?:FAMILY\s+HISTORY|FH|F\.H\.|FHx)[:\s]*/gim,
-    /^(?:FAMILY\s+MEDICAL\s+HISTORY)[:\s]*/gim,
+    /^(?:FAMILY\s+HISTORY|FH|F\.H\.|FHx)(?![A-Za-z0-9])[:\s]*/gim,
+    /^(?:FAMILY\s+MEDICAL\s+HISTORY)(?![A-Za-z0-9])[:\s]*/gim,
   ],
 
   social_history: [
-    /^(?:SOCIAL\s+HISTORY|SH|S\.H\.|SHx)[:\s]*/gim,
-    /^(?:SOCIAL|HABITS)[:\s]*/gim,
+    // Also "SOCIAL AND DEVELOPMENTAL HISTORY", "SOCIAL/FAMILY HISTORY",
+    // "SOCIAL HABITS", "SOCIAL BACKGROUND" (but not "Social worker")
+    /^(?:SOCIAL(?:(?:\s*[/&]\s*|\s+AND\s+)(?:DEVELOPMENTAL|FAMILY))?\s+(?:HISTORY|HX)|SOCIAL\s+(?:HABITS|BACKGROUND)|SH|S\.H\.|SHx)(?![A-Za-z0-9])[:\s]*/gim,
+    /^(?:SOCIAL|HABITS)(?=\s*:|\s+[-–—](?:\s|$)|\s*$)[:\s]*/gim,
   ],
 
   review_of_systems: [
-    /^(?:REVIEW\s+OF\s+SYSTEMS|ROS|R\.O\.S\.)[:\s]*/gim,
-    /^(?:SYSTEMS\s+REVIEW|CONSTITUTIONAL)[:\s]*/gim,
+    /^(?:REVIEW\s+OF\s+SYSTEMS|ROS|R\.O\.S\.)(?![A-Za-z0-9])[:\s]*/gim,
+    /^(?:SYSTEMS\s+REVIEW|CONSTITUTIONAL)(?![A-Za-z0-9])[:\s]*/gim,
   ],
 
   physical_exam: [
-    /^(?:PHYSICAL\s+EXAM(?:INATION)?|PE|P\.E\.|EXAM(?:INATION)?)[:\s]*/gim,
-    /^(?:OBJECTIVE|PHYSICAL\s+FINDINGS)[:\s]*/gim,
+    /^(?:PHYSICAL\s+EXAM(?:INATION)?|P\.E\.|EXAM(?:INATION)?)(?![A-Za-z0-9])[:\s]*/gim,
+    /^(?:OBJECTIVE|PHYSICAL\s+FINDINGS)(?![A-Za-z0-9])[:\s]*/gim,
+    // Bare "PE" doubles as "pulmonary embolism" in prose, so it must be a header
+    /^PE(?=\s*:|\s+[-–—](?:\s|$)|\s*$)[:\s]*/gim,
   ],
 
   vitals: [
-    /^(?:VITAL\s+SIGNS|VITALS|VS)[:\s]*/gim,
+    /^(?:VITAL\s+SIGNS|VITALS|VS)(?![A-Za-z0-9])[:\s]*/gim,
   ],
 
   assessment: [
-    /^(?:ASSESSMENT|IMPRESSION|DIAGNOSIS|DX)[:\s]*/gim,
-    /^(?:CLINICAL\s+IMPRESSION|ASSESSMENT\s*(?:AND|&)\s*PLAN|A\s*[/&]\s*P)[:\s]*/gim,
+    /^(?:(?:ASSESSMENT|IMPRESSIONS?|DIAGNOS[EI]S|DX)(?![A-Za-z0-9])|ASSESSMENTS(?=(?:[\s/]+[A-Za-z]+){0,2}\s*:|\s+[-–—](?:\s|$)|\s*$))[:\s]*/gim,
+    /^(?:CLINICAL\s+IMPRESSION|ASSESSMENT\s*(?:AND|&|\/)\s*PLAN|A\s*[/&]\s*P)(?![A-Za-z0-9])[:\s]*/gim,
+    // Qualified diagnosis headers common in operative and discharge notes
+    /^(?:(?:PRE|POST)-?OPERATIVE|DISCHARGE|ADMI(?:SSION|TTING)|FINAL)\s+DIAGNOS[EI]S(?![A-Za-z0-9])[:\s]*/gim,
   ],
 
   plan: [
-    /^(?:PLAN|TREATMENT\s+PLAN|MANAGEMENT)[:\s]*/gim,
-    /^(?:RECOMMENDATIONS|DISPOSITION)[:\s]*/gim,
+    /^(?:(?:PLAN|TREATMENT\s+PLAN|MANAGEMENT)(?![A-Za-z0-9])|(?:TREATMENT\s+)?PLANS(?=(?:[\s/]+[A-Za-z]+){0,2}\s*:|\s+[-–—](?:\s|$)|\s*$))[:\s]*/gim,
+    /^(?:RECOMMENDATIONS|DISPOSITION)(?![A-Za-z0-9])[:\s]*/gim,
   ],
 
   labs: [
-    /^(?:LABORATORY|LAB(?:S)?|LABORATORY\s+RESULTS?|LAB\s+VALUES)[:\s]*/gim,
-    /^(?:DIAGNOSTIC\s+LABS?|BLOODWORK)[:\s]*/gim,
+    /^(?:(?:LABORATORY|LAB(?:S)?|LABORATORY\s+RESULTS?|LAB\s+VALUES)(?![A-Za-z0-9])|LABORATORIES(?=(?:[\s/]+[A-Za-z]+){0,2}\s*:|\s+[-–—](?:\s|$)|\s*$))[:\s]*/gim,
+    /^(?:DIAGNOSTIC\s+LABS?|BLOODWORK)(?![A-Za-z0-9])[:\s]*/gim,
   ],
 
   imaging: [
-    /^(?:IMAGING|RADIOLOGY|DIAGNOSTIC\s+IMAGING)[:\s]*/gim,
-    /^(?:X-?RAY|CT|MRI|ULTRASOUND)[:\s]*/gim,
+    /^(?:IMAGING|RADIOLOGY|DIAGNOSTIC\s+IMAGING)(?![A-Za-z0-9])[:\s]*/gim,
+    /^(?:(?:X-?RAY|CT|MRI|ULTRASOUND)(?![A-Za-z0-9])|X-?RAYS(?=(?:[\s/]+[A-Za-z]+){0,2}\s*:|\s+[-–—](?:\s|$)|\s*$))[:\s]*/gim,
   ],
 
   procedures: [
-    /^(?:PROCEDURES?|INTERVENTIONS?)[:\s]*/gim,
-    /^(?:OPERATIONS?|SURGICAL\s+PROCEDURES?)[:\s]*/gim,
+    /^(?:PROCEDURES?|INTERVENTIONS?)(?![A-Za-z0-9])[:\s]*/gim,
+    /^(?:OPERATIONS?|SURGICAL\s+PROCEDURES?)(?![A-Za-z0-9])[:\s]*/gim,
   ],
 
   unknown: [],
