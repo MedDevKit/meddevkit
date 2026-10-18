@@ -1,0 +1,90 @@
+/**
+ * Portable regex subset (SPEC §6): every pattern, cue and boundary in the
+ * data file compiles with the `u` flag, uses only `i` (or no) flags, and
+ * avoids syntax that differs between ECMAScript and Python `re`.
+ */
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import type { PatternFile } from '../src';
+import { lintPortable } from './helpers/portable-lint';
+
+const file = JSON.parse(
+  readFileSync(fileURLToPath(new URL('../data/crisis.patterns.json', import.meta.url)), 'utf8'),
+) as PatternFile;
+
+const entries: { id: string; pattern: string; flags?: string }[] = [
+  ...file.patterns,
+  ...file.modifiers,
+  ...(file.boundaries ?? []),
+];
+
+describe('portable regex subset', () => {
+  it('every entry compiles with the u flag', () => {
+    for (const e of entries) {
+      expect(() => new RegExp(e.pattern, `${e.flags ?? ''}u`), e.id).not.toThrow();
+    }
+  });
+
+  it('flags are only "i" or empty', () => {
+    for (const e of entries) expect(['', 'i'], e.id).toContain(e.flags ?? '');
+  });
+
+  it('no entry uses non-portable syntax', () => {
+    const problems = entries
+      .map((e) => ({ id: e.id, issues: lintPortable(e.pattern) }))
+      .filter((p) => p.issues.length > 0);
+    expect(problems).toEqual([]);
+  });
+
+  it('no pattern can match the empty string', () => {
+    for (const e of entries) {
+      if (e.id.startsWith('boundary.')) continue;
+      expect(new RegExp(e.pattern, `${e.flags ?? ''}u`).test(''), e.id).toBe(false);
+    }
+  });
+});
+
+describe('lintPortable catches what §6 forbids', () => {
+  const bad: [string, string][] = [
+    ['(?<name>x)', 'named group'],
+    ['(?P<name>x)', 'named group'],
+    ['\\k<name>', 'named back-reference'],
+    ['\\p{L}', 'unicode property escape'],
+    ['[\\p{L}]', 'unicode property escape'],
+    ['(?i)abc', 'inline flag or unknown group'],
+    ['(?i:abc)', 'inline flag or unknown group'],
+    ['(?>abc)', 'atomic group'],
+    ['a++', 'possessive quantifier'],
+    ['a{2,3}+', 'possessive quantifier'],
+    ['abc\\Z', '\\Z anchor'],
+    ['abc\\z', '\\z anchor'],
+    ['(?<=a+)b', 'variable-width lookbehind'],
+    ['(?<=a|bc)d', 'variable-width lookbehind'],
+    ['(?<!x?)y', 'variable-width lookbehind'],
+    ['(?<=a{1,2})b', 'variable-width lookbehind'],
+    ['end$', '$ anchor (Python also matches before a final newline)'],
+  ];
+  for (const [source, kind] of bad) {
+    it(`flags ${source}`, () => {
+      expect(lintPortable(source).map((x) => x.kind)).toContain(kind);
+    });
+  }
+
+  const good = [
+    '\\bwish(?:ed)?\\s+i\\b',
+    '(?<=\\bi am )suicidal',
+    '(?:(?<=\\bim )|(?<=\\bi am ))x',
+    '(?<!\\d\\s)kms',
+    '(?<=[a-z]{3})x',
+    'a+?b*?',
+    '(?![\\s\\S])',
+    '[$]',
+    '\\$5',
+  ];
+  for (const source of good) {
+    it(`accepts ${source}`, () => {
+      expect(lintPortable(source)).toEqual([]);
+    });
+  }
+});

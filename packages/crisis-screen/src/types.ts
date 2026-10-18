@@ -103,12 +103,35 @@ export interface PatternEntry {
  */
 export type ModifierCueName = ModifierName | 'third_party';
 
+/**
+ * Where a cue looks for findings (README, "Pattern file format"):
+ * - `forward`: the finding starts at or after the cue's end, within `maxGap`
+ *   characters and the same clause (negation-style scope).
+ * - `sentence`: anywhere in the same sentence, unless a `strong` boundary
+ *   lies between the cue and the finding.
+ * - `sentence-or-next`: the same sentence or the next one (`resolved`).
+ * - `within`: the finding lies inside the cue's match (quotations).
+ * - `overlap`: the cue's match overlaps the finding (idioms, reflexives).
+ * - `clause` (block cues): the same clause as the finding.
+ * - `between` (block cues): after a `forward` cue of the same modifier and
+ *   before the end of the finding; cancels that cue only.
+ */
+export type CueScope = 'forward' | 'sentence' | 'sentence-or-next' | 'within' | 'overlap' | 'clause' | 'between';
+
 /** One context-modifier cue in `data/crisis.patterns.json`. */
 export interface ModifierCue {
   /** Stable cue id, `<modifier>.<name>`. */
   id: string;
   /** Which modifier this cue signals. */
   modifier: ModifierCueName;
+  /** Where the cue applies. Defaults per modifier when omitted (see the engine's `DEFAULT_SCOPE`). */
+  scope?: CueScope;
+  /** `set` (default) turns the modifier on; `block` cancels it (pseudo-cue). */
+  effect?: 'set' | 'block';
+  /** `forward` scope only: maximum characters between the cue's end and the finding's start (default 50). */
+  maxGap?: number;
+  /** Subject the cue implies for findings it applies to (for example `unknown` for a generic "someone"). */
+  subject?: 'unknown';
   /** Regex source in the portable ECMAScript/Python subset (SPEC §6). */
   pattern: string;
   /** Regex flags; only a whole-pattern `i` is allowed. */
@@ -121,6 +144,27 @@ export interface ModifierCue {
   relation: SourceRelation;
 }
 
+/**
+ * Clause boundary in `data/crisis.patterns.json`. `clause` boundaries end
+ * `forward` and `clause` scopes; `strong` boundaries also end `sentence` scopes.
+ */
+export interface BoundaryCue {
+  /** Stable id, `boundary.<name>`. */
+  id: string;
+  /** How far the boundary cuts. */
+  strength: 'clause' | 'strong';
+  /** Regex source in the portable ECMAScript/Python subset (SPEC §6). */
+  pattern: string;
+  /** Regex flags; only a whole-pattern `i` is allowed. */
+  flags?: string;
+  /** Why the boundary is shaped the way it is. */
+  note?: string;
+  /** Source keys defined in NOTICE. */
+  sources: string[];
+  /** How the boundary relates to its sources. */
+  relation: SourceRelation;
+}
+
 /** Shape of `data/crisis.patterns.json`. */
 export interface PatternFile {
   /** Semver version of the pattern data, reported as `patternsVersion`. */
@@ -129,4 +173,6 @@ export interface PatternFile {
   patterns: PatternEntry[];
   /** Context-modifier cues. */
   modifiers: ModifierCue[];
+  /** Clause boundaries used for modifier scope. Optional for compatibility; none means sentence splitting only. */
+  boundaries?: BoundaryCue[];
 }
