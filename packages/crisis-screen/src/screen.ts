@@ -86,7 +86,7 @@ export function screenWith(data: CompiledData, text: string, options?: ScreenOpt
   let crisisPresent = false;
 
   for (const m of detection) {
-    const mods = cues.evaluate(m);
+    const mods = cues.evaluate(m, m.pattern.entry.category);
     const r = resolveFinding(m.pattern.entry.category, m.pattern.entry.level, mods, suppressIdioms);
     if (r.level === 'crisis') crisisPresent = true;
     if (LEVEL_RANK[r.level] > LEVEL_RANK[level]) level = r.level;
@@ -95,7 +95,7 @@ export function screenWith(data: CompiledData, text: string, options?: ScreenOpt
 
   let immediacyFlag = false;
   for (const m of immediacy) {
-    const mods = cues.evaluate(m);
+    const mods = cues.evaluate(m, 'immediacy');
     const active = crisisPresent && immediacyActive(mods, suppressIdioms);
     if (active) immediacyFlag = true;
     const subject = mods.thirdParty ? 'other' : mods.subjectUnknown ? 'unknown' : 'self';

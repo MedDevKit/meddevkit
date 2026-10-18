@@ -334,6 +334,145 @@ describe('pattern file validation', () => {
   });
 });
 
+describe('fragments, cores and vetoes (pattern file format)', () => {
+  const pattern = (id: string, source: string): PatternEntry => ({
+    id,
+    category: 'acute_distress',
+    level: 'concern',
+    pattern: source,
+    flags: 'i',
+    sources: [],
+    relation: 'informed-by',
+  });
+  const frag = (id: string, source: string) => ({ id, pattern: source, sources: [], relation: 'informed-by' as const });
+
+  it('expands {{fragment}} references, including references to earlier fragments', () => {
+    const data = compileData({
+      version: '1.0.0',
+      fragments: [frag('W', 'falling|coming'), frag('CORE', '(?:{{W}})\\s+apart')],
+      patterns: [pattern('distress.x', '\\b{{CORE}}\\b')],
+      modifiers: [],
+    });
+    expect(screenWith(data, 'I am coming apart').findings[0]).toMatchObject({ ruleId: 'distress.x', text: 'coming apart' });
+  });
+
+  it('rejects unknown, forward and duplicate fragments, naming only the id', () => {
+    const cases: PatternFile[] = [
+      { version: '1.0.0', patterns: [pattern('distress.x', '{{NOPE}}')], modifiers: [] },
+      { version: '1.0.0', fragments: [frag('A', '{{B}}'), frag('B', 'b')], patterns: [], modifiers: [] },
+      { version: '1.0.0', fragments: [frag('A', 'a'), frag('A', 'b')], patterns: [], modifiers: [] },
+    ];
+    const messages = cases.map((file) => {
+      try {
+        compileData(file);
+        return '';
+      } catch (e) {
+        return (e as Error).message;
+      }
+    });
+    expect(messages[0]).toBe('crisis-screen: distress.x references an unknown fragment');
+    expect(messages[1]).toBe('crisis-screen: A references an unknown fragment');
+    expect(messages[2]).toBe('crisis-screen: fragment A is malformed or duplicated');
+  });
+
+  it('the first participating capturing group is the span, so a negation in the frame scopes over it', () => {
+    const r = screenText("I'm not falling apart, I'm just tired.");
+    const f = only(r, 'distress.state');
+    expect(f.text).toBe('falling apart');
+    expect(f.modifiers.negated).toBe(true);
+    expect(r.level).toBe('none');
+    const cut = screenText("I've never cut and I'm not going to start now.");
+    expect(cut.level).toBe('concern');
+    expect(only(cut, 'self_harm.cutting_frame')).toMatchObject({ text: 'cut', level: 'concern' });
+  });
+
+  it('an empty capturing group is a veto: the match yields no finding', () => {
+    const data = compileData({
+      version: '1.0.0',
+      patterns: [pattern('distress.x', '\\breading\\s+about\\s+panic()|\\bpanic\\b')],
+      modifiers: [],
+    });
+    expect(screenWith(data, "I'm reading about panic.").findings).toEqual([]);
+    expect(screenWith(data, 'I panic every night.').findings).toHaveLength(1);
+    expect(screenText("I'm reading about self-harm to support my teenager.").findings).toEqual([]);
+  });
+
+  it('a cue with categories acts only on those categories; sentence-or-next blocks reach the previous sentence', () => {
+    const data = compileData({
+      version: '1.0.0',
+      patterns: [
+        { ...pattern('threat.x', '\\bkill\\s+me\\b'), category: 'threatened_by_other' },
+        pattern('distress.x', '\\bkilling\\s+me\\b'),
+      ],
+      modifiers: [
+        { id: 'idiom.mom', modifier: 'idiom', scope: 'sentence', pattern: '\\bmom\\b', flags: 'i', sources: [], relation: 'informed-by' },
+        {
+          id: 'idiom.block',
+          modifier: 'idiom',
+          scope: 'sentence-or-next',
+          effect: 'block',
+          categories: ['threatened_by_other'],
+          pattern: '\\bknife\\b',
+          flags: 'i',
+          sources: [],
+          relation: 'informed-by',
+        },
+      ],
+    });
+    const threat = screenWith(data, 'Mom will kill me. She has a knife.');
+    expect(threat.findings[0]).toMatchObject({ ruleId: 'threat.x', level: 'concern', subject: 'other' });
+    expect(threat.findings[0].modifiers.idiom).toBe(false);
+    const distress = screenWith(data, 'Mom is killing me. She has a knife.');
+    expect(distress.findings[0]).toMatchObject({ ruleId: 'distress.x', level: 'none' });
+    expect(distress.findings[0].modifiers.idiom).toBe(true);
+    expect(screenWith(data, 'Mom will kill me.').findings[0].level).toBe('none');
+  });
+
+  it('rejects a cue naming an unknown category', () => {
+    expect(() =>
+      compileData({
+        version: '1.0.0',
+        patterns: [],
+        modifiers: [
+          { id: 'idiom.x', modifier: 'idiom', categories: ['nope' as never], pattern: 'x', sources: [], relation: 'informed-by' },
+        ],
+      }),
+    ).toThrow('crisis-screen: idiom.x names an unknown category');
+  });
+});
+
+describe('threatened_by_other (SPEC §4 clarification)', () => {
+  it('a literal threat is concern with subject other, even though the subject is a third party', () => {
+    const r = screenText('My boyfriend said he\'d kill me if I ever left, and he keeps a knife next to the bed.');
+    expect(r.level).toBe('concern');
+    const f = r.findings.find((x) => x.category === 'threatened_by_other') as ScreenFinding;
+    expect(f).toMatchObject({ level: 'concern', baseLevel: 'concern', subject: 'other' });
+    expect(f.modifiers.idiom).toBe(false);
+  });
+
+  it('literal evidence in the next sentence keeps the threat', () => {
+    expect(screenText("If my dad finds out I'm gay he'll kill me. He's said it before and he's hit me.").level).toBe('concern');
+  });
+
+  it('a figurative threat stays an idiom (none, finding kept)', () => {
+    const r = screenText('My mom is going to kill me when she sees my grades.');
+    expect(r.level).toBe('none');
+    const f = r.findings.find((x) => x.category === 'threatened_by_other') as ScreenFinding;
+    expect(f).toMatchObject({ level: 'none', subject: 'other' });
+    expect(f.modifiers.idiom).toBe(true);
+    expect(screenText('My mom is going to kill me when she sees my grades.', { suppressIdioms: false }).level).toBe('concern');
+  });
+
+  it('violence against the writer is a threat finding', () => {
+    expect(screenText('my stepdad choked me last night').findings[0]).toMatchObject({
+      category: 'threatened_by_other',
+      level: 'concern',
+      subject: 'other',
+    });
+    expect(screenText('My brother beat me at chess again.').level).toBe('none');
+  });
+});
+
 describe('sentence splitting', () => {
   it('splits on terminators followed by whitespace and on line breaks', () => {
     const t = 'I was sad. I am fine!\nOkay?  Yes';
@@ -369,12 +508,14 @@ describe('performance', () => {
     return performance.now() - t0;
   }
 
+  // Measured locally at about 20 ms (realistic) and under 40 ms (worst adversarial case).
+  // The limits leave room for slow CI machines while still catching catastrophic backtracking.
   it('screens a 50K-character realistic input quickly', () => {
     let text = '';
     while (text.length < 50_000) text += `${realistic} `;
     screenText(text.slice(0, 1000)); // warm up
-    const ms = timed(text);
-    expect(ms).toBeLessThan(2000);
+    const ms = Math.min(timed(text), timed(text));
+    expect(ms).toBeLessThan(200);
   });
 
   it('stays fast on adversarial 50K inputs (no catastrophic backtracking)', () => {
@@ -392,10 +533,22 @@ describe('performance', () => {
       '.\n'.repeat(25_000),
       'kill me '.repeat(6_300),
       'wish '.repeat(10_000),
+      // First-person frames with bounded fillers and long vocabulary slots.
+      'I am '.repeat(10_000),
+      'i just really honestly kinda '.repeat(1_800),
+      'im so tired and '.repeat(3_200),
+      "I'm not not not ".repeat(3_200),
+      'thinking about thinking about '.repeat(1_700),
+      'my friend my friend '.repeat(2_600),
+      'until it until it '.repeat(2_800),
+      'relapsed '.repeat(5_600),
+      'I wish I could I wish I could '.repeat(1_700),
+      'a'.repeat(50_000),
     ];
+    screenText(inputs[0].slice(0, 1000)); // warm up
     for (const text of inputs) {
       const ms = timed(text);
-      expect(ms, `${text.slice(0, 16)}...`).toBeLessThan(2000);
+      expect(ms, `${text.slice(0, 16)}...`).toBeLessThan(400);
     }
   });
 });

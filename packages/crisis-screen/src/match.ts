@@ -3,7 +3,7 @@
  */
 
 import type { CompiledPattern } from './data';
-import { findAll, type Span } from './regex';
+import { findCores, type Span } from './regex';
 import type { ScreenLevel } from './types';
 
 /** One raw pattern match, before modifiers. */
@@ -15,7 +15,9 @@ export interface Match extends Span {
 export const LEVEL_RANK: Record<ScreenLevel, number> = { none: 0, concern: 1, crisis: 2 };
 
 /**
- * All matches of `patterns`, with overlaps removed.
+ * All matches of `patterns`, with overlaps removed. A pattern with a
+ * capturing group contributes the group's span (its core), not the whole
+ * match.
  *
  * When matches overlap, the one with the higher base level wins, then the
  * longer one, then the earlier one, then the one listed first in the data
@@ -24,7 +26,7 @@ export const LEVEL_RANK: Record<ScreenLevel, number> = { none: 0, concern: 1, cr
 export function matchPatterns(text: string, patterns: readonly CompiledPattern[]): Match[] {
   const all: Match[] = [];
   for (const pattern of patterns) {
-    for (const span of findAll(pattern.re, text)) all.push({ ...span, pattern });
+    for (const span of findCores(pattern.re, text)) all.push({ ...span, pattern });
   }
   return dedupe(all);
 }

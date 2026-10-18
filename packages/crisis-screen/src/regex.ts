@@ -16,16 +16,17 @@ export interface Span {
  * Error messages name the rule id only, never input text or the pattern body.
  *
  * @param id - Rule, cue or boundary id (for error messages)
- * @param source - Regex source
+ * @param source - Regex source, with fragments already expanded
  * @param flags - Flags from the data file: `i` or empty
+ * @param indices - Also record group offsets (`d`), for patterns whose first group is the span
  */
-export function compilePattern(id: string, source: string, flags: string | undefined): RegExp {
+export function compilePattern(id: string, source: string, flags: string | undefined, indices = false): RegExp {
   const f = flags ?? '';
   if (f !== '' && f !== 'i') {
     throw new Error(`crisis-screen: ${id} uses unsupported flags; only "i" is allowed`);
   }
   try {
-    return new RegExp(source, `${f}gu`);
+    return new RegExp(source, `${f}gu${indices ? 'd' : ''}`);
   } catch {
     throw new Error(`crisis-screen: ${id} does not compile`);
   }
@@ -51,6 +52,42 @@ export function findAll(re: RegExp, text: string): Span[] {
     out.push({ start, end });
   }
   return out;
+}
+
+/**
+ * Like {@link findAll}, but when a capturing group took part in the match,
+ * the span is the first such group (the pattern's core) rather than the whole
+ * match. The regex must have been compiled with `indices`. A match whose core
+ * is empty is a veto: it consumes the text and yields no span.
+ */
+export function findCores(re: RegExp, text: string): Span[] {
+  const out: Span[] = [];
+  re.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const start = m.index;
+    const end = start + m[0].length;
+    if (end === start) {
+      const cp = text.codePointAt(start);
+      re.lastIndex = start + (cp !== undefined && cp > 0xffff ? 2 : 1);
+      continue;
+    }
+    const core = firstGroup(m);
+    if (core === undefined) out.push({ start, end });
+    else if (core[1] > core[0]) out.push({ start: core[0], end: core[1] });
+  }
+  return out;
+}
+
+/** Offsets of the first capturing group that took part in the match, if any. */
+function firstGroup(m: RegExpExecArray): [number, number] | undefined {
+  const indices = m.indices;
+  if (indices === undefined) return undefined;
+  for (let i = 1; i < indices.length; i++) {
+    const g = indices[i];
+    if (g !== undefined) return g;
+  }
+  return undefined;
 }
 
 /** Index of the first element whose `key` is >= `value` (array sorted by key). */

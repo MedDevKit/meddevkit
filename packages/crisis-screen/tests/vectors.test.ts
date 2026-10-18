@@ -48,7 +48,7 @@ function check(v: Vector, r: ScreenResult): void {
 
 describe('dev vectors (data/vectors.jsonl)', () => {
   it('has the expected number of vectors with unique ids', () => {
-    expect(vectors.length).toBeGreaterThanOrEqual(160);
+    expect(vectors.length).toBeGreaterThanOrEqual(381);
     expect(new Set(vectors.map((v) => v.id)).size).toBe(vectors.length);
   });
 

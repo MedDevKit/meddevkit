@@ -17,6 +17,12 @@
  *   5. no modifier                               -> the pattern's base level
  *
  * `resolved` on its own changes nothing.
+ *
+ * `threatened_by_other` findings are about another person by definition: their
+ * subject is always "other" and the third-party rule does not apply to them
+ * (the third party is the one making the threat). Idiom cues still suppress
+ * figurative threats; the data file blocks them when the threat reads as
+ * literal (SPEC §4 clarifications).
  */
 
 import type { ModifierState } from './scope';
@@ -47,13 +53,15 @@ export function resolveFinding(
   mods: ModifierState,
   suppressIdioms: boolean,
 ): Resolution {
-  const subject: Resolution['subject'] = mods.thirdParty ? 'other' : mods.subjectUnknown ? 'unknown' : 'self';
+  const threat = category === 'threatened_by_other';
+  const subject: Resolution['subject'] =
+    threat || mods.thirdParty ? 'other' : mods.subjectUnknown ? 'unknown' : 'self';
   // Past crisis language is reported as history (SPEC §4: "crisis -> concern + history").
   const history: CrisisCategory = base === 'crisis' ? 'history' : category;
 
   if (base === 'none') return { level: 'none', category, subject };
   if (mods.idiom && suppressIdioms) return { level: 'none', category, subject };
-  if (mods.thirdParty) return { level: 'none', category, subject };
+  if (mods.thirdParty && !threat) return { level: 'none', category, subject };
   if (mods.past && mods.resolved) {
     if (category === 'acute_distress') return { level: 'none', category, subject };
     return { level: 'concern', category: history, subject };

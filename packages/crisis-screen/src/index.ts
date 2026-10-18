@@ -20,6 +20,7 @@ export type {
   ModifierCue,
   CueScope,
   BoundaryCue,
+  FragmentEntry,
   PatternFile,
 } from './types';
 

@@ -14,7 +14,8 @@ acute distress or at risk of harming themselves, and returns a level
 (`none`, `concern` or `crisis`), an `immediacy` flag, and every finding with
 its rule id, matched span, offsets and context modifiers (negated, past,
 resolved, hypothetical, quoted, idiom, third party). Context changes a
-finding's level; it never hides it.
+finding's level; it never hides it. It also flags a person threatening the
+writer (`threatened_by_other`, at `concern`).
 
 The library does not show crisis resources and does not decide what happens
 next. Escalation is your job, because the right resources depend on locale and
@@ -27,10 +28,12 @@ Lifeline) on `crisis`.
 - **No logging.** It does not log, store or send text, and errors never
   contain text. Findings carry offsets and spans of at most 120 characters.
 - **Zero runtime dependencies.** Works in Node >= 18 and the browser.
-- **Linear time.** A 50,000-character input screens in tens of milliseconds;
-  the test suite includes adversarial inputs to guard against regex
-  backtracking.
-- **English only** (v1). Risk to others is out of scope (v1).
+- **Linear time.** A 50,000-character input screens in about 20 ms on a
+  laptop (under 40 ms for the worst adversarial input in the test suite);
+  every repetition in the patterns is bounded, and the test suite includes
+  adversarial inputs to guard against regex backtracking.
+- **English only** (v1). Risk to others is out of scope (v1); a threat
+  against the writer is flagged as `threatened_by_other`.
 - **Not HIPAA-anything.** This package makes no HIPAA or other regulatory
   compliance claim.
 
@@ -77,8 +80,15 @@ not a string or the options are malformed.
 | `none` | Nothing found, or only idioms, third parties, or clearly resolved past distress |
 
 Categories: `suicidal_ideation_passive`, `suicidal_ideation_active`,
-`self_harm`, `unsafe_with_self` (base `crisis`); `acute_distress`, `history`
-(base `concern`); `immediacy` (flag only).
+`self_harm`, `unsafe_with_self` (base `crisis`); `acute_distress`, `history`,
+`threatened_by_other` (base `concern`); `immediacy` (flag only).
+
+`threatened_by_other` flags a person threatening or hurting the writer ("my
+boyfriend said he'd kill me if I left, and he keeps a knife by the bed"). Its
+subject is always `other`, and the third-party rule does not lower it. The
+same shape is often figurative ("my mom is going to kill me when she sees my
+grades"), so idiom cues still suppress it, unless means, violence or fear
+appear in the same or the next sentence; then it stays `concern`.
 
 One modifier sets each finding's level, by precedence:
 
@@ -122,6 +132,9 @@ The raw file is also shipped in the package as
 ```jsonc
 {
   "version": "0.1.0",
+  "fragments": [  // named regex pieces, referenced as {{ID}}
+    { "id": "SELF", "pattern": "\\b(?:i|im|i['’]m|i\\s+am|ive|i['’]ve|…)\\b", "note": "…", "sources": [], "relation": "informed-by" }
+  ],
   "patterns": [   // detection patterns
     { "id": "si_active.ending_it", "category": "suicidal_ideation_active", "level": "crisis",
       "pattern": "…", "flags": "i", "note": "…", "sources": ["srl-v1.0", "nimh-asq"], "relation": "informed-by" }
@@ -136,19 +149,42 @@ The raw file is also shipped in the package as
 }
 ```
 
+**Fragments.** A pattern, cue, boundary or later fragment may reference a
+fragment as `{{ID}}`; the loader replaces each reference with
+`(?:<fragment>)` before compiling, and a fragment may reference only fragments
+listed before it. Fragments hold the shared frames and vocabulary slots: a
+first-person subject (`SELF`), bounded fillers (`FILL`, hedges, intensifiers,
+auxiliaries and negations), a clause start for subjectless texting (`START`),
+and slots such as `IDEATE`, `INTEND`, `CANT`, `PILLS`, `MEANS`, `BODY`,
+`SH_MARK` and `TIMING`. Another runtime that vendors the file must apply the
+same substitution (one regex replace).
+
+**Finding span.** When a capturing group takes part in a match, the first such
+group is the finding's span and the rest of the match is required context. A
+frame such as "I've never" can then precede the core "cut" without being part
+of the span, so a negation in the frame scopes over the finding as a cue. An
+empty group is a veto: the match consumes its text and yields no finding
+(for example "reading about self-harm"). Without a participating group, the
+whole match is the span.
+
 Cue `scope` values: `forward` (the finding starts within `maxGap` characters
 after the cue, in the same clause), `sentence` (same sentence, unless a
 `strong` boundary lies between), `sentence-or-next` (same or next sentence),
 `within` (the finding lies inside the cue's match, e.g. a quotation),
 `overlap` (the cue overlaps the finding, e.g. an idiom). Cues with
 `"effect": "block"` cancel a modifier: `clause` and `sentence` blocks cancel it
-for findings in that clause or segment; a `between` block cancels a `forward`
-cue when it lies after that cue and before the end of the finding.
+for findings in that clause or segment, a `sentence-or-next` block for
+findings in the same or the previous sentence, and a `between` block cancels a
+`forward` cue when it lies after that cue and before the end of the finding.
+A cue with `"categories": [...]` acts only on findings of those categories
+(for example the literal-threat evidence that keeps a `threatened_by_other`
+finding from being read as an idiom).
 
 Every regex stays within a portable subset (no named groups, `\p{…}`, inline
 flags, atomic or possessive groups, variable-width lookbehind, `\Z`/`\z` or
-`$`), so ECMAScript (`u` flag) and Python `re` give the same matches. Patterns
-run over the whole text; sentence splitting is structural and lives in code.
+`$`), so ECMAScript (`u` flag) and Python `re` give the same matches, before
+and after fragment expansion. Patterns run over the whole text; sentence
+splitting is structural and lives in code.
 
 ### Metrics
 

@@ -14,13 +14,15 @@
  * - `sentence-or-next` cues act on findings in the same or previous sentence.
  * - `within` cues contain the finding; `overlap` cues overlap it.
  * - `clause` / `sentence` block cues cancel the modifier for findings in the
- *   same clause / strong segment.
+ *   same clause / strong segment; `sentence-or-next` block cues cancel it for
+ *   findings in the same or the previous sentence.
+ * - A cue with `categories` acts only on findings of those categories.
  */
 
 import type { CompiledCue } from './data';
 import { findAll, lowerBound, type Span } from './regex';
 import type { TextIndex } from './text';
-import type { ModifierCueName } from './types';
+import type { CrisisCategory, ModifierCueName } from './types';
 
 interface Hit extends Span {
   cue: CompiledCue;
@@ -64,9 +66,10 @@ interface PerModifier {
   within: Hit[];
   overlap: Hit[];
   maxContainLen: number;
-  /** clause ids / strong ids with a block cue */
+  /** clause ids / strong ids / sentence indices with a block cue */
   blockClause: Set<number>;
   blockSentence: Set<number>;
+  blockSentenceOrNext: Set<number>;
 }
 
 function emptyPerModifier(): PerModifier {
@@ -81,6 +84,7 @@ function emptyPerModifier(): PerModifier {
     maxContainLen: 0,
     blockClause: new Set(),
     blockSentence: new Set(),
+    blockSentenceOrNext: new Set(),
   };
 }
 
@@ -94,9 +98,14 @@ function hasInRange(set: Set<number>, from: number, to: number): boolean {
   return false;
 }
 
+/** Bucket key: the modifier alone, or the modifier restricted to one category. */
+function bucketKey(m: ModifierCueName, category?: CrisisCategory): string {
+  return category === undefined ? m : `${m}|${category}`;
+}
+
 /** Index of cue hits for one text. */
 export class CueIndex {
-  private readonly by = new Map<ModifierCueName, PerModifier>();
+  private readonly by = new Map<string, PerModifier>();
 
   /**
    * @param text - The input text
@@ -112,34 +121,12 @@ export class CueIndex {
   ) {
     for (const m of MODIFIERS) this.by.set(m, emptyPerModifier());
     for (const cue of cues) {
-      const pm = this.by.get(cue.modifier) as PerModifier;
-      for (const span of findAll(cue.re, text)) {
-        const hit: Hit = { ...span, cue, consumed: false };
-        if (cue.effect === 'block') {
-          if (cue.scope === 'between') pm.between.push(hit);
-          else if (cue.scope === 'clause') addRange(pm.blockClause, index.clause(hit.start), index.clause(hit.end));
-          else addRange(pm.blockSentence, index.strong(hit.start), index.strong(hit.end));
-          continue;
-        }
-        switch (cue.scope) {
-          case 'forward':
-            hit.consumed = overlapsAny(hit, detection);
-            pm.forward.push(hit);
-            pm.forwardMaxGap = Math.max(pm.forwardMaxGap, cue.maxGap);
-            break;
-          case 'sentence':
-            addRange(pm.sentence, index.strong(hit.start), index.strong(hit.end));
-            break;
-          case 'sentence-or-next':
-            pm.sentenceOrNext.add(index.sentence(hit.start));
-            break;
-          case 'within':
-          case 'overlap':
-            (cue.scope === 'within' ? pm.within : pm.overlap).push(hit);
-            pm.maxContainLen = Math.max(pm.maxContainLen, hit.end - hit.start);
-            break;
-        }
-      }
+      const buckets =
+        cue.categories === undefined
+          ? [this.bucket(cue.modifier)]
+          : [...cue.categories].map((c) => this.bucket(cue.modifier, c));
+      const spans = findAll(cue.re, text);
+      for (const pm of buckets) this.add(pm, cue, spans, detection);
     }
     for (const pm of this.by.values()) {
       pm.forward.sort((a, b) => a.end - b.end);
@@ -149,29 +136,93 @@ export class CueIndex {
     }
   }
 
-  /** Which modifiers apply to the finding `f`. */
-  evaluate(f: Span): ModifierState {
+  private bucket(m: ModifierCueName, category?: CrisisCategory): PerModifier {
+    const key = bucketKey(m, category);
+    let pm = this.by.get(key);
+    if (pm === undefined) {
+      pm = emptyPerModifier();
+      this.by.set(key, pm);
+    }
+    return pm;
+  }
+
+  private add(pm: PerModifier, cue: CompiledCue, spans: readonly Span[], detection: readonly Span[]): void {
+    const index = this.index;
+    for (const span of spans) {
+      const hit: Hit = { ...span, cue, consumed: false };
+      if (cue.effect === 'block') {
+        if (cue.scope === 'between') pm.between.push(hit);
+        else if (cue.scope === 'clause') addRange(pm.blockClause, index.clause(hit.start), index.clause(hit.end));
+        else if (cue.scope === 'sentence-or-next') pm.blockSentenceOrNext.add(index.sentence(hit.start));
+        else addRange(pm.blockSentence, index.strong(hit.start), index.strong(hit.end));
+        continue;
+      }
+      switch (cue.scope) {
+        case 'forward':
+          hit.consumed = overlapsAny(hit, detection);
+          pm.forward.push(hit);
+          pm.forwardMaxGap = Math.max(pm.forwardMaxGap, cue.maxGap);
+          break;
+        case 'sentence':
+          addRange(pm.sentence, index.strong(hit.start), index.strong(hit.end));
+          break;
+        case 'sentence-or-next':
+          pm.sentenceOrNext.add(index.sentence(hit.start));
+          break;
+        case 'within':
+        case 'overlap':
+          (cue.scope === 'within' ? pm.within : pm.overlap).push(hit);
+          pm.maxContainLen = Math.max(pm.maxContainLen, hit.end - hit.start);
+          break;
+      }
+    }
+  }
+
+  /** Which modifiers apply to the finding `f` of category `category`. */
+  evaluate(f: Span, category?: CrisisCategory): ModifierState {
     const generic = { value: false };
-    const hypothetical = this.applies('hypothetical', f, generic);
+    const hypothetical = this.applies('hypothetical', f, category, generic);
     return {
-      negated: this.applies('negated', f),
-      past: this.applies('past', f),
-      resolved: this.applies('resolved', f),
+      negated: this.applies('negated', f, category),
+      past: this.applies('past', f, category),
+      resolved: this.applies('resolved', f, category),
       hypothetical,
-      quoted: this.applies('quoted', f),
-      idiom: this.applies('idiom', f),
-      thirdParty: this.applies('third_party', f),
+      quoted: this.applies('quoted', f, category),
+      idiom: this.applies('idiom', f, category),
+      thirdParty: this.applies('third_party', f, category),
       subjectUnknown: hypothetical && generic.value,
     };
   }
 
-  /** Whether modifier `m` applies to `f`; sets `unknown.value` when an applied forward cue implies subject "unknown". */
-  private applies(m: ModifierCueName, f: Span, unknown?: { value: boolean }): boolean {
-    const pm = this.by.get(m) as PerModifier;
-    const ix = this.index;
-    if (hasInRange(pm.blockClause, ix.clause(f.start), ix.clause(f.end))) return false;
-    if (hasInRange(pm.blockSentence, ix.strong(f.start), ix.strong(f.end))) return false;
+  /**
+   * Whether modifier `m` applies to `f`: a block cue in any bucket cancels it;
+   * otherwise a set cue in any bucket applies it. Sets `unknown.value` when an
+   * applied forward cue implies subject "unknown".
+   */
+  private applies(m: ModifierCueName, f: Span, category: CrisisCategory | undefined, unknown?: { value: boolean }): boolean {
+    const buckets = [this.by.get(m) as PerModifier];
+    const restricted = category === undefined ? undefined : this.by.get(bucketKey(m, category));
+    if (restricted !== undefined) buckets.push(restricted);
+    if (buckets.some((pm) => this.blocked(pm, f))) return false;
+    let applied = false;
+    for (const pm of buckets) if (this.setBy(pm, f, unknown)) applied = true;
+    return applied;
+  }
 
+  private blocked(pm: PerModifier, f: Span): boolean {
+    const ix = this.index;
+    if (hasInRange(pm.blockClause, ix.clause(f.start), ix.clause(f.end))) return true;
+    if (hasInRange(pm.blockSentence, ix.strong(f.start), ix.strong(f.end))) return true;
+    if (pm.blockSentenceOrNext.size > 0) {
+      const first = ix.sentence(f.start);
+      const last = ix.sentence(Math.max(f.start, f.end - 1));
+      if (hasInRange(pm.blockSentenceOrNext, first, last + 1)) return true;
+    }
+    return false;
+  }
+
+  private setBy(pm: PerModifier, f: Span, unknown?: { value: boolean }): boolean {
+    const ix = this.index;
     let applied = false;
     if (hasInRange(pm.sentence, ix.strong(f.start), ix.strong(f.end))) applied = true;
     if (!applied && pm.sentenceOrNext.size > 0) {

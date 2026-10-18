@@ -232,6 +232,24 @@ apply). See [`research/lexicons.md`](./research/lexicons.md).
 Modifier cues (negation, past, resolved, hypothetical, third_party, idiom,
 quoted) live in the same file, under `modifiers`, in the same format.
 
+**Format extensions (M1 round 2).** Both runtimes must implement these. The
+package README section on the pattern file is the normative description:
+- `fragments`: named regex pieces, referenced as `{{ID}}` and expanded to
+  `(?:…)` at load time. A fragment may reference only fragments listed
+  before it.
+- The finding span is the first capturing group that takes part in the
+  match, or the whole match if no group does.
+- An empty capturing group is a veto: the match yields no finding.
+- A cue may carry `categories`, so it applies only to findings of those
+  categories.
+- Cue `scope` values: clause, sentence and `sentence-or-next`. A block cue
+  with `sentence-or-next` scope blocks findings in the same or the next
+  sentence.
+- `boundaries`: clause-boundary cues that limit scope.
+
+Offsets are UTF-16 code units in TypeScript. The Python port must convert
+them, or document the difference.
+
 **Portable regex subset.** Every pattern must compile and behave the same in
 ECMAScript (`u` flag) and Python `re`:
 

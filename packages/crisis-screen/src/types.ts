@@ -14,6 +14,9 @@ export type ScreenLevel = 'none' | 'concern' | 'crisis';
 /**
  * Pattern family a finding belongs to (SPEC §4, Categories).
  * `immediacy` is a flag-only category: it never lowers a level.
+ * `threatened_by_other` flags a person threatening the writer (base level
+ * `concern`, subject `other`); idiom cues suppress it only when the threat is
+ * figurative ("my mom is going to kill me when she sees my grades").
  */
 export type CrisisCategory =
   | 'suicidal_ideation_passive'
@@ -22,7 +25,8 @@ export type CrisisCategory =
   | 'unsafe_with_self'
   | 'acute_distress'
   | 'immediacy'
-  | 'history';
+  | 'history'
+  | 'threatened_by_other';
 
 /**
  * Context modifier reported on every finding (SPEC §4, Context modifiers).
@@ -85,7 +89,17 @@ export interface PatternEntry {
   category: CrisisCategory;
   /** Base level before modifiers. */
   level: ScreenLevel;
-  /** Regex source in the portable ECMAScript/Python subset (SPEC §6). */
+  /**
+   * Regex source in the portable ECMAScript/Python subset (SPEC §6). May use
+   * `{{fragment}}` references (see {@link FragmentEntry}). When a capturing
+   * group takes part in a match, the first such group is the finding's span
+   * and the rest of the match is context that must be present (for example a
+   * first-person frame "I've never" before the core "cut", so a negation in
+   * the frame stays outside the span and scopes over it). Without a
+   * participating group, the whole match is the span. An empty group is a
+   * veto: the match consumes its text and yields no finding (for example
+   * "reading about self-harm").
+   */
   pattern: string;
   /** Regex flags; only a whole-pattern `i` is allowed. */
   flags?: string;
@@ -94,6 +108,26 @@ export interface PatternEntry {
   /** Source keys defined in NOTICE, for example `srl-v1.0` or `nimh-asq`. */
   sources: string[];
   /** How the pattern relates to its sources. */
+  relation: SourceRelation;
+}
+
+/**
+ * A named, reusable piece of regex in `data/crisis.patterns.json`
+ * (`fragments`), such as a first-person frame or a vocabulary slot. Patterns,
+ * cues, boundaries and later fragments reference it as `{{id}}`; the loader
+ * replaces each reference with `(?:<fragment>)` before compiling. A consumer
+ * in another runtime must apply the same substitution.
+ */
+export interface FragmentEntry {
+  /** Stable fragment id, upper case (`SELF`, `FILL`, `BODY`). */
+  id: string;
+  /** Regex source in the portable subset; may reference earlier fragments. */
+  pattern: string;
+  /** What the fragment covers. */
+  note?: string;
+  /** Source keys defined in NOTICE. */
+  sources: string[];
+  /** How the fragment relates to its sources. */
   relation: SourceRelation;
 }
 
@@ -115,6 +149,8 @@ export type ModifierCueName = ModifierName | 'third_party';
  * - `clause` (block cues): the same clause as the finding.
  * - `between` (block cues): after a `forward` cue of the same modifier and
  *   before the end of the finding; cancels that cue only.
+ * Block cues may also use `sentence` (same strong segment) and
+ * `sentence-or-next` (the same or the previous sentence).
  */
 export type CueScope = 'forward' | 'sentence' | 'sentence-or-next' | 'within' | 'overlap' | 'clause' | 'between';
 
@@ -132,7 +168,9 @@ export interface ModifierCue {
   maxGap?: number;
   /** Subject the cue implies for findings it applies to (for example `unknown` for a generic "someone"). */
   subject?: 'unknown';
-  /** Regex source in the portable ECMAScript/Python subset (SPEC §6). */
+  /** When set, the cue applies only to findings of these categories. */
+  categories?: CrisisCategory[];
+  /** Regex source in the portable ECMAScript/Python subset (SPEC §6); may use `{{fragment}}` references. */
   pattern: string;
   /** Regex flags; only a whole-pattern `i` is allowed. */
   flags?: string;
@@ -153,7 +191,7 @@ export interface BoundaryCue {
   id: string;
   /** How far the boundary cuts. */
   strength: 'clause' | 'strong';
-  /** Regex source in the portable ECMAScript/Python subset (SPEC §6). */
+  /** Regex source in the portable ECMAScript/Python subset (SPEC §6); may use `{{fragment}}` references. */
   pattern: string;
   /** Regex flags; only a whole-pattern `i` is allowed. */
   flags?: string;
@@ -169,6 +207,8 @@ export interface BoundaryCue {
 export interface PatternFile {
   /** Semver version of the pattern data, reported as `patternsVersion`. */
   version: string;
+  /** Named regex pieces referenced as `{{id}}`. Optional; expanded before compiling. */
+  fragments?: FragmentEntry[];
   /** Detection patterns. */
   patterns: PatternEntry[];
   /** Context-modifier cues. */

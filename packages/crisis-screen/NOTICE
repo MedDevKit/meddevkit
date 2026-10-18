@@ -4,7 +4,7 @@ Licensed under the MIT License; see LICENSE for the copyright notice.
 Pattern provenance
 -------------------------------------------------------------------------------
 
-Every detection pattern, modifier cue and clause boundary in
+Every fragment, detection pattern, modifier cue and clause boundary in
 data/crisis.patterns.json was written for this package. Each entry names the
 sources that informed it (the `sources` field, using the keys below) and its
 `relation` to them:
