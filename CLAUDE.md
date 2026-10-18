@@ -23,6 +23,7 @@ MedDevKit/
 │       │   └── utils/            # Boundary, normalize utilities
 │       └── tests/
 │   └── adapter-azure/            # @meddevkit/adapter-azure (Azure Text Analytics for health)
+│   └── crisis-screen/            # @meddevkit/crisis-screen (first-person crisis-language screen; unreviewed)
 ├── package.json                  # Root monorepo config
 ├── pnpm-workspace.yaml
 └── tsconfig.base.json
@@ -99,6 +100,8 @@ This is an **open-source** project with basic patterns.
 - Specialty-specific patterns
 - HIPAA-compliant redaction strategies
 
+**Exception:** `@meddevkit/crisis-screen` patterns, modifier cues and test vectors are fully public by design, because a safety screen must be transparent about what it matches (D2 in `docs/specs/crisis-screen/SPEC.md`).
+
 ## Testing Requirements
 
 - Minimum 80% code coverage
@@ -130,7 +133,7 @@ feat(chunker): Add respiratory rate pattern detection
 ## Package Publishing
 
 Published by `.github/workflows/release.yml` via npm trusted publishing (no token/OTP; never publish locally). Each package releases on its own tag:
-`chunker-v<version>` for @meddevkit/chunker, `adapter-azure-v<version>` for @meddevkit/adapter-azure.
+`chunker-v<version>` for @meddevkit/chunker, `adapter-azure-v<version>` for @meddevkit/adapter-azure, `crisis-screen-v<version>` for @meddevkit/crisis-screen.
 
 1. Bump `version` in the package's `package.json` and add a `CHANGELOG.md` entry; merge to main via PR
    - `packages/chunker/README.md` and `LICENSE` are copies of the root files (npm needs them in the package dir); CI fails if they differ

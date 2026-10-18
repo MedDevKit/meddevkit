@@ -1,0 +1,71 @@
+@meddevkit/crisis-screen
+Licensed under the MIT License; see LICENSE for the copyright notice.
+
+Pattern provenance
+-------------------------------------------------------------------------------
+
+Every fragment, detection pattern, modifier cue and clause boundary in
+data/crisis.patterns.json was written for this package. Each entry names the
+sources that informed it (the `sources` field, using the keys below) and its
+`relation` to them:
+
+- `informed-by`: the source was consulted for vocabulary or framing; the
+  regular expression and its wording are our own.
+- `adapted-from`: close to the source's wording, so the source's licence
+  terms apply.
+
+In pattern version 0.1.0 every entry is `informed-by`. No entry is
+`adapted-from` a source, no source list or term set was copied or converted
+into patterns, and no source data files are redistributed with this package.
+Entries with an empty `sources` list are original to this package.
+
+Not used in any form: the O'Dea et al. (2015) and Sawhney et al. (2018)
+phrase lists, the wording of the Columbia-Suicide Severity Rating Scale
+(C-SSRS), and the LIWC dictionaries.
+
+Listing a source does not imply that its authors, their institutions or NIMH
+endorse this package.
+
+-------------------------------------------------------------------------------
+srl-v1.0  Suicide Risk Lexicon v1.0
+-------------------------------------------------------------------------------
+
+Vocabulary for the suicidal ideation, self-harm, unsafe-with-self, lethal
+means, preparation and acute-distress patterns was informed by the construct
+definitions and example terms of the Suicide Risk Lexicon v1.0
+(construct-tracker, (c) Daniel M. Low and contributors, Apache-2.0).
+Low DM, Rankin O, Coppersmith DDL, Bentley KH, Nock MK, Ghosh SS (2026),
+J Psychopathol Clin Sci, doi:10.1037/abn0001152.
+
+Source: https://github.com/danielmlow/construct-tracker
+Licence of the source: Apache License, Version 2.0
+         https://www.apache.org/licenses/LICENSE-2.0
+
+The patterns are not copies or adaptations of the lexicon's token lists, and
+no lexicon files are included. If a later version adapts lexicon terms
+(`relation: "adapted-from"`), it must ship the full Apache-2.0 text and a
+change notice (Apache-2.0 section 4) with the package.
+
+-------------------------------------------------------------------------------
+nimh-asq  NIMH Ask Suicide-Screening Questions (ASQ)
+-------------------------------------------------------------------------------
+
+Framing informed by the National Institute of Mental Health (NIMH) ASQ
+Suicide Risk Screening Tool, described by NIMH as a "public domain tool, free
+of charge". The ASQ items are second-person questions; the patterns are
+first-person statements written for this package.
+https://www.nimh.nih.gov/research/research-conducted-at-nimh/asq-toolkit-materials
+
+Source: National Institute of Mental Health. US public domain.
+
+-------------------------------------------------------------------------------
+nimh-warning-signs  NIMH Warning Signs of Suicide
+-------------------------------------------------------------------------------
+
+The immediacy (plan, means, preparation) cues and some acute-distress
+patterns were informed by the NIMH publication "Warning Signs of Suicide".
+NIMH states the information is in the public domain and may be reused without
+permission (images excluded; none are used).
+https://www.nimh.nih.gov/health/publications/warning-signs-of-suicide
+
+Source: National Institute of Mental Health. US public domain.
