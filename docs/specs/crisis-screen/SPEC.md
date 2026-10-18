@@ -126,6 +126,16 @@ Modifier precedence: `idiom` > `third_party` > (`past` + `resolved`) >
   "I've been suicidal") counts as `suicidal_ideation_passive`.
 - **Immediacy** is set only when a non-negated `crisis` finding is present.
 
+- **A threat against the writer is not an idiom** (added after M1 probing).
+  "My husband is going to kill me, he has a gun" must not return `none`. A
+  new category, `threatened_by_other` (base level `concern`, subject
+  `other`), flags a person threatening the writer, and `idiom` must not
+  suppress it when the threat is literal (a person as the subject, plus
+  means, violence or fear). Figurative uses about people stay idioms ("my
+  mom is going to kill me when she sees my grades"). When a literal reading
+  is plausible, keep `concern`, per recall first. Full risk-to-others
+  handling is still v2 (D5).
+
 ## 5. API
 
 ### TypeScript
