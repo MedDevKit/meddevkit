@@ -508,14 +508,16 @@ describe('performance', () => {
     return performance.now() - t0;
   }
 
-  // Measured locally at about 20 ms (realistic) and under 40 ms (worst adversarial case).
-  // The limits leave room for slow CI machines while still catching catastrophic backtracking.
+  // Measured at about 20 ms (realistic) and under 40 ms (worst adversarial case) on a laptop,
+  // and about 500 ms on GitHub's shared runners. Catastrophic backtracking takes seconds to
+  // minutes on these inputs, so a 3 s limit still catches it without flaking on slow CI.
+  const LIMIT_MS = 3000;
   it('screens a 50K-character realistic input quickly', () => {
     let text = '';
     while (text.length < 50_000) text += `${realistic} `;
     screenText(text.slice(0, 1000)); // warm up
     const ms = Math.min(timed(text), timed(text));
-    expect(ms).toBeLessThan(200);
+    expect(ms).toBeLessThan(LIMIT_MS);
   });
 
   it('stays fast on adversarial 50K inputs (no catastrophic backtracking)', () => {
@@ -548,7 +550,7 @@ describe('performance', () => {
     screenText(inputs[0].slice(0, 1000)); // warm up
     for (const text of inputs) {
       const ms = timed(text);
-      expect(ms, `${text.slice(0, 16)}...`).toBeLessThan(400);
+      expect(ms, `${text.slice(0, 16)}...`).toBeLessThan(LIMIT_MS);
     }
   });
 });

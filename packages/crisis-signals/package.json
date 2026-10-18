@@ -1,6 +1,6 @@
 {
   "name": "@meddevkit/crisis-signals",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Offline keyword-and-context screening that flags first-person crisis language for human follow-up (unreviewed; not a diagnostic or risk-assessment tool)",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
