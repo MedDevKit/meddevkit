@@ -1,8 +1,12 @@
-# @meddevkit/crisis-screen
+# @meddevkit/crisis-signals
 
 ## Unreleased (0.1.0)
 
 ### Minor Changes
+
+- Renamed from `@meddevkit/crisis-screen` (never published) to
+  `@meddevkit/crisis-signals`, so "screen" isn't read as a UI. The API
+  (`screenText`) is unchanged; "screen" there means screening.
 
 - Round 2 (generalisation): patterns rebuilt around shared frames and
   vocabulary slots instead of fixed phrases. A first-person subject
@@ -63,4 +67,4 @@
 - Package scaffold: public types (`ScreenLevel`, `CrisisCategory`,
   `ScreenOptions`, `ScreenFinding`, `ScreenResult`, pattern-file types) and
   `PATTERNS_VERSION`; the pattern JSON is bundled into the build and shipped
-  raw as `@meddevkit/crisis-screen/patterns.json`.
+  raw as `@meddevkit/crisis-signals/patterns.json`.

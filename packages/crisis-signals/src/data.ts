@@ -58,7 +58,7 @@ export function resolveFragments(fragments: readonly FragmentEntry[] | undefined
   const out = new Map<string, string>();
   for (const f of fragments ?? []) {
     if (typeof f.id !== 'string' || typeof f.pattern !== 'string' || out.has(f.id)) {
-      throw new Error(`crisis-screen: fragment ${String(f.id)} is malformed or duplicated`);
+      throw new Error(`crisis-signals: fragment ${String(f.id)} is malformed or duplicated`);
     }
     out.set(f.id, expandFragments(f.id, f.pattern, out));
   }
@@ -72,7 +72,7 @@ export function resolveFragments(fragments: readonly FragmentEntry[] | undefined
 export function expandFragments(ownerId: string, source: string, fragments: ReadonlyMap<string, string>): string {
   return source.replace(FRAGMENT_REF, (_, name: string) => {
     const body = fragments.get(name);
-    if (body === undefined) throw new Error(`crisis-screen: ${ownerId} references an unknown fragment`);
+    if (body === undefined) throw new Error(`crisis-signals: ${ownerId} references an unknown fragment`);
     return `(?:${body})`;
   });
 }
@@ -119,7 +119,7 @@ export interface CompiledData {
  */
 export function compileData(file: PatternFile): CompiledData {
   if (typeof file.version !== 'string' || !Array.isArray(file.patterns) || !Array.isArray(file.modifiers)) {
-    throw new Error('crisis-screen: pattern file is malformed');
+    throw new Error('crisis-signals: pattern file is malformed');
   }
   const fragments = resolveFragments(file.fragments);
   const source = (id: string, pattern: string): string => expandFragments(id, pattern, fragments);
@@ -127,7 +127,7 @@ export function compileData(file: PatternFile): CompiledData {
   const immediacy: CompiledPattern[] = [];
   file.patterns.forEach((entry, order) => {
     if (!CATEGORIES.has(entry.category) || !LEVELS.has(entry.level)) {
-      throw new Error(`crisis-screen: ${entry.id} has an unknown category or level`);
+      throw new Error(`crisis-signals: ${entry.id} has an unknown category or level`);
     }
     const compiled = { entry, re: compilePattern(entry.id, source(entry.id, entry.pattern), entry.flags, true), order };
     (entry.category === 'immediacy' ? immediacy : detection).push(compiled);
@@ -136,15 +136,15 @@ export function compileData(file: PatternFile): CompiledData {
   const cues = file.modifiers.map((entry): CompiledCue => {
     const modifier = entry.modifier;
     if (!(modifier in DEFAULT_SCOPE)) {
-      throw new Error(`crisis-screen: ${entry.id} has an unknown modifier`);
+      throw new Error(`crisis-signals: ${entry.id} has an unknown modifier`);
     }
     const effect = entry.effect ?? 'set';
     const scope = entry.scope ?? DEFAULT_SCOPE[modifier];
     if (!(effect === 'set' ? SET_SCOPES : BLOCK_SCOPES).has(scope)) {
-      throw new Error(`crisis-screen: ${entry.id} has a scope that does not fit its effect`);
+      throw new Error(`crisis-signals: ${entry.id} has a scope that does not fit its effect`);
     }
     if (entry.categories !== undefined && !entry.categories.every((c) => CATEGORIES.has(c))) {
-      throw new Error(`crisis-screen: ${entry.id} names an unknown category`);
+      throw new Error(`crisis-signals: ${entry.id} names an unknown category`);
     }
     return {
       entry,

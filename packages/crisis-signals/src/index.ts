@@ -1,5 +1,5 @@
 /**
- * @meddevkit/crisis-screen
+ * @meddevkit/crisis-signals
  *
  * Offline keyword-and-context screen for first-person crisis language.
  * Not a diagnostic or risk-assessment tool. See README.md.

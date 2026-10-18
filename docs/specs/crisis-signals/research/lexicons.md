@@ -1,4 +1,4 @@
-# Lexicon sources for `@meddevkit/crisis-screen` patterns
+# Lexicon sources for `@meddevkit/crisis-signals` patterns
 
 > **Status:** research note, 2026-10-18. Companion to [`../SPEC.md`](../SPEC.md)
 > (§4 categories, §6 pattern JSON, §11 D2 public patterns, §12 prior art) and
@@ -188,7 +188,7 @@ the answers arrive before M3's "reviewed" claims.
 - **MIT compatibility** (inferred):
   - `crisis.patterns.json` can stay **MIT**, provided that we:
     1. include the Apache-2.0 text, for example in
-       `packages/crisis-screen/THIRD_PARTY_NOTICES.md` or `LICENSES/Apache-2.0.txt`;
+       `packages/crisis-signals/THIRD_PARTY_NOTICES.md` or `LICENSES/Apache-2.0.txt`;
     2. credit SRL and the paper;
     3. state that we adapted the tokens.
   - Add `THIRD_PARTY_NOTICES.md` to the package's `files` in
@@ -259,7 +259,7 @@ modifiers fill.
    the spec, not made here.
 2. **Coverage audit** (a dev tool, not a release gate):
    - Vendor only the mapped constructs from a pinned commit into a dev-only
-     folder (for example `packages/crisis-screen/tools/third_party/srl-v1.0/`
+     folder (for example `packages/crisis-signals/tools/third_party/srl-v1.0/`
      with the Apache LICENSE and a README). Keep this folder out of the npm
      `files`.
    - For each token, test the bare token and the frame "I {token}" against

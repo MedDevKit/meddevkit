@@ -4,12 +4,12 @@ name: Release
 # Trigger: push a tag <prefix>-v<version> matching that package's package.json:
 #   chunker-v<version>        -> @meddevkit/chunker        (packages/chunker)
 #   adapter-azure-v<version>  -> @meddevkit/adapter-azure  (packages/adapter-azure)
-#   crisis-screen-v<version>  -> @meddevkit/crisis-screen  (packages/crisis-screen)
+#   crisis-signals-v<version>  -> @meddevkit/crisis-signals  (packages/crisis-signals)
 # or run manually from main and pick the package.
 
 on:
   push:
-    tags: ['chunker-v*', 'adapter-azure-v*', 'crisis-screen-v*']
+    tags: ['chunker-v*', 'adapter-azure-v*', 'crisis-signals-v*']
   workflow_dispatch:
     inputs:
       package:
@@ -19,7 +19,7 @@ on:
         options:
           - chunker
           - adapter-azure
-          - crisis-screen
+          - crisis-signals
 
 permissions:
   contents: read
@@ -35,7 +35,7 @@ jobs:
       github.ref == 'refs/heads/main' ||
       startsWith(github.ref, 'refs/tags/chunker-v') ||
       startsWith(github.ref, 'refs/tags/adapter-azure-v') ||
-      startsWith(github.ref, 'refs/tags/crisis-screen-v')
+      startsWith(github.ref, 'refs/tags/crisis-signals-v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,7 +53,7 @@ jobs:
           case "$PREFIX" in
             chunker) PKG_DIR=packages/chunker; PKG_NAME=@meddevkit/chunker ;;
             adapter-azure) PKG_DIR=packages/adapter-azure; PKG_NAME=@meddevkit/adapter-azure ;;
-            crisis-screen) PKG_DIR=packages/crisis-screen; PKG_NAME=@meddevkit/crisis-screen ;;
+            crisis-signals) PKG_DIR=packages/crisis-signals; PKG_NAME=@meddevkit/crisis-signals ;;
             *) echo "::error::Unknown package '$PREFIX'"; exit 1 ;;
           esac
           {
