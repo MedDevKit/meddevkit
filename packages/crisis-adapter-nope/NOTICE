@@ -1,0 +1,47 @@
+@meddevkit/crisis-adapter-nope
+Licensed under the MIT License; see LICENSE for the copyright notice.
+
+Third-party model
+-------------------------------------------------------------------------------
+
+This package is a client for the nope-edge model. It contains no model
+weights, tokenizer files or other files from the model repositories, and it
+does not redistribute them. Users download the model themselves from
+NopeNet and run it on their own server.
+
+The request format (no system prompt; one user message holding the text;
+temperature 0; max_tokens 300), the output format, the list of 9 risk types
+and the rule for dropping non-risk elements are taken from the nope-edge
+model card. The parser and the mapping to @meddevkit/crisis-signals levels
+are our own code.
+
+nope-edge (https://huggingface.co/nopenet/nope-edge)
+nope-edge-GGUF (https://huggingface.co/nopenet/nope-edge-GGUF)
+  Copyright (c) 2026 NopeNet, LLC
+  MIT License. Per its LICENSE.md, "The MIT grant above is the complete
+  licence for NOPE Edge — free for any use, including commercial, with no
+  separate agreement required ('Software' = the model weights and
+  accompanying files)."
+
+  Built on Qwen3-4B (https://huggingface.co/Qwen/Qwen3-4B)
+  Copyright 2024-2025 Alibaba Cloud. All Rights Reserved.
+  Licensed under the Apache License, Version 2.0
+  (http://www.apache.org/licenses/LICENSE-2.0). The model's NOTICE.md
+  carries this notice; keep it if you redistribute the weights.
+
+Intended use (from the model's DISCLAIMER.md, not a licence condition):
+nope-edge is a detection aid, "not predictive, not diagnostic, not
+therapeutic, and not a replacement for clinical judgment". Its disclaimer
+lists as out of scope, among others: "Real-time, time-critical, or emergency
+assessment" and "Autonomous intervention, escalation, or any significant
+action ... taken solely on an Edge output without human review". This
+adapter only raises a flag for a person to review and is never meant to be
+the only safeguard.
+
+NopeNet's hosted API is a separate service and is not used by this package.
+NopeNet's privacy policy states: "We do not sign Business Associate
+Agreements (BAAs) at this time. Our services are not intended for use with
+Protected Health Information (PHI)."
+
+NOPE, NopeNet and nope-edge are names of NopeNet, LLC. This package is not
+affiliated with or endorsed by NopeNet, LLC or Alibaba Cloud.
