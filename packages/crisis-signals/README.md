@@ -130,6 +130,45 @@ Context rules worth knowing:
 - The text's level is the maximum over its findings, so the writer's own
   statement wins over an idiom or a third-party finding elsewhere.
 
+## Second opinion (opt-in)
+
+`screenTextWithSecondOpinion` combines the offline screen with one model or
+API classifier that you configure. **Text leaves the device only if you
+install and configure an adapter**; `screenText` alone never sends anything,
+and this package makes no network calls itself.
+
+```ts
+import { screenTextWithSecondOpinion } from '@meddevkit/crisis-signals';
+
+const r = await screenTextWithSecondOpinion(text, adapter, { timeoutMs: 10000 });
+// r.level, r.immediacy   combined
+// r.local                exactly what screenText(text) returns
+// r.secondOpinion        { name, version, status: 'ok'|'error'|'timeout'|'invalid', result?, reason?, durationMs }
+// r.degraded             true when the adapter did not return a valid result
+// r.raisedBy             'local' | 'secondOpinion' | 'both' | 'none'
+```
+
+Combination rules:
+
+- The offline result is computed first and returned unchanged as `local`.
+- The final level is the **maximum** of the two: a model can raise a level,
+  never lower it. `raisedBy: 'secondOpinion'` means the flag has no rule,
+  span or modifiers behind it; route it to a person like any other flag.
+- An opinion about someone else (`subject: 'other'`) raises at most to
+  `concern`. Adapters for providers that cannot tell the subject raise at
+  most to `concern`.
+- `immediacy` is the local flag, or the model's when the final level is
+  `crisis`.
+- If the adapter throws, times out (default 10 s) or returns an invalid
+  result, you get the local level with `degraded: true`. The outcome never
+  contains input text or the provider's error message.
+- Aborting your `signal` rejects with an `AbortError` and aborts the
+  adapter's request.
+
+Adapters implement the `CrisisSecondOpinion` interface and are separate
+packages. The first, `@meddevkit/crisis-adapter-nope` (self-hosted
+nope-edge), is in development.
+
 ## Patterns are public
 
 The full pattern list, modifier cues and clause boundaries are open source, so

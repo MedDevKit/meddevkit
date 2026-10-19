@@ -28,5 +28,17 @@ export type {
 
 export { screenText } from './screen';
 
+export type {
+  CrisisSecondOpinion,
+  SecondOpinionResult,
+  SecondOpinionStatus,
+  SecondOpinionOutcome,
+  SecondOpinionOptions,
+  RaisedBy,
+  CombinedScreenResult,
+} from './secondOpinion';
+
+export { screenTextWithSecondOpinion, DEFAULT_SECOND_OPINION_TIMEOUT_MS } from './secondOpinion';
+
 /** Version of the bundled pattern file (`data/crisis.patterns.json`). */
 export const PATTERNS_VERSION: string = DATA.version;

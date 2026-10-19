@@ -52,6 +52,13 @@
   harm to another person, which v1 does not detect).
 - Performance: about 25 ms for a realistic 50,000-character input on a
   laptop (was about 20 ms), under 45 ms for the worst adversarial input.
+- Opt-in second opinion: `screenTextWithSecondOpinion(text, opinion,
+  options)` and the `CrisisSecondOpinion` / `SecondOpinionResult`
+  interfaces for adapter packages. The offline result is returned unchanged
+  as `local`; the final level is the maximum of the two (a model can raise,
+  never lower); an adapter error, timeout (default 10 s) or invalid result
+  returns the local result with `degraded: true` and no input text. No
+  network calls or dependencies in this package; `screenText` is unchanged.
 
 ## 0.1.1
 
