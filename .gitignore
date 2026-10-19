@@ -30,9 +30,6 @@ logs/
 npm-debug.log*
 pnpm-debug.log*
 
-# Private/internal docs
-docs/meddevkit-integration-architecture.md
-
 # Test coverage
 coverage/
 
