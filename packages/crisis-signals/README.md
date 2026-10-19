@@ -4,8 +4,48 @@ A keyword-and-context screen for first-person crisis language. It is not a diagn
 
 > **Status: in development, unreviewed.** No clinician has reviewed the
 > categories, the level mapping, the patterns or the test vectors yet. Do not
-> describe this screen as validated. Metrics (recall, false-alarm rates) are to
-> be published after the held-out evaluation and clinical review.
+> describe this screen as validated. The measured limits below come from
+> synthetic test vectors, not from clinical review or real-world use.
+
+## Measured limits
+
+On text it was not written against, it caught about half of crisis
+statements. Use it as an explainable, fast, offline first-pass signal, never
+as the only safeguard.
+
+Patterns version 0.2.0. All vectors are synthetic and unreviewed; intervals
+are Wilson 95% confidence intervals.
+
+| Set | Crisis recall | Any-flag recall | Grief false alarms (→ `crisis`) | Idiom and everyday false alarms |
+|---|---|---|---|---|
+| **Held-out v2, written blind (167 vectors). The honest number.** | 15/31 = 48.4% (32.0–65.2%) | 36/56 = 64.3% (51.2–75.5%) | 0/14 (0–21.5%) | 2/34 = 5.9% (1.6–19.1%) |
+| Dev (534 vectors; patterns written against it) | 172/172 | 245/245 | 0/28 | 0/134 |
+
+The dev numbers show only that the patterns match the text they were written
+for. The held-out numbers are the ones to plan around, and the small sample
+gives them wide intervals.
+
+**What it misses.** Mostly oblique language: preparation described without
+any crisis words, imagery of a method or of an outcome, and wishes expressed
+by their meaning rather than by recognisable wording. Keyword-and-context
+rules plateau on this kind of text; more rounds of patterns mostly fit the dev
+set.
+
+**What it does well.**
+
+- Explicit first-person statements of suicidal thoughts, self-harm or feeling
+  unsafe with oneself, including slang and texting spellings.
+- Context: negation, past and resolved distress, hypotheticals, quotations,
+  third parties and idioms change a finding's level, and the finding is kept.
+- Explainability: every flag carries a rule id, matched span, offsets and
+  modifiers, and the full pattern list is public.
+- Speed and offline use: deterministic, no network calls, no dependencies,
+  about 25 ms for 50,000 characters.
+
+**Recommendation.** Combine it with a second opinion (see
+[Second opinion (opt-in)](#second-opinion-opt-in); the
+`@meddevkit/crisis-adapter-nope` adapter is in development) and with a human
+review process. A `none` result does not mean the text is safe.
 
 ## What it does
 
@@ -281,8 +321,8 @@ pnpm --filter @meddevkit/crisis-signals metrics        # SPEC §8 metrics on dat
 node packages/crisis-signals/scripts/metrics.mjs <file.jsonl>
 ```
 
-Published metrics: to be published after the held-out evaluation and clinical
-review.
+Published metrics: see [Measured limits](#measured-limits). Each release
+reports the dev set and every held-out set separately (SPEC §8).
 
 Design and evaluation plan:
 [SPEC.md](https://github.com/MedDevKit/meddevkit/blob/main/docs/specs/crisis-signals/SPEC.md).

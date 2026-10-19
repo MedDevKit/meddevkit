@@ -1,6 +1,6 @@
 # @meddevkit/crisis-signals
 
-## Unreleased (0.2.0)
+## 0.2.0
 
 ### Minor Changes
 
@@ -46,12 +46,6 @@
   Final-sounding statements that are alarming on their own ("this is the
   last time you'll hear from me", "nobody can talk me out of it") are
   `concern` (`distress.vague_finality`).
-- Dev vectors: 533/534 pass (crisis recall 100%, any-flag recall 100%, grief
-  false-alarm 0%, idiom and everyday false-alarm 0%, on 534 vectors). One
-  vector is a known label conflict (it expects an idiom-marked finding for
-  harm to another person, which v1 does not detect).
-- Performance: about 25 ms for a realistic 50,000-character input on a
-  laptop (was about 20 ms), under 45 ms for the worst adversarial input.
 - Opt-in second opinion: `screenTextWithSecondOpinion(text, opinion,
   options)` and the `CrisisSecondOpinion` / `SecondOpinionResult`
   interfaces for adapter packages. The offline result is returned unchanged
@@ -59,6 +53,24 @@
   never lower); an adapter error, timeout (default 10 s) or invalid result
   returns the local result with `degraded: true` and no input text. No
   network calls or dependencies in this package; `screenText` is unchanged.
+
+### Patch Changes
+
+- Measured limits (patterns 0.2.0, Wilson 95% CIs, synthetic and unreviewed
+  vectors): on held-out v2, written blind (167 vectors), crisis recall 15/31
+  = 48.4% (32.0–65.2%), any-flag recall 36/56 = 64.3% (51.2–75.5%), grief
+  false alarms 0/14 (0–21.5%), idiom and everyday false alarms 2/34 = 5.9%
+  (1.6–19.1%). Misses are mostly oblique (preparation without crisis words,
+  imagery, wishes phrased by meaning). The README now positions the package
+  as an explainable, fast, offline first-pass signal that must never be the
+  only safeguard, and recommends combining it with a second opinion and a
+  human process.
+- Dev vectors: 533/534 pass (crisis recall 100%, any-flag recall 100%, grief
+  false-alarm 0%, idiom and everyday false-alarm 0%, on 534 vectors). One
+  vector is a known label conflict (it expects an idiom-marked finding for
+  harm to another person, which v1 does not detect).
+- Performance: about 25 ms for a realistic 50,000-character input on a
+  laptop (was about 20 ms), under 45 ms for the worst adversarial input.
 
 ## 0.1.1
 
