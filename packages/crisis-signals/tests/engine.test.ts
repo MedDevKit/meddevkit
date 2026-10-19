@@ -441,6 +441,87 @@ describe('fragments, cores and vetoes (pattern file format)', () => {
   });
 });
 
+describe('context-gated patterns (pattern file format)', () => {
+  const p = (id: string, category: PatternEntry['category'], level: PatternEntry['level'], source: string, extra: Partial<PatternEntry> = {}): PatternEntry => ({
+    id,
+    category,
+    level,
+    pattern: source,
+    flags: 'i',
+    sources: [],
+    relation: 'informed-by',
+    ...extra,
+  });
+  const file: PatternFile = {
+    version: '1.0.0',
+    patterns: [
+      p('si_active.die', 'suicidal_ideation_active', 'crisis', '\\bwant to die\\b'),
+      p('immediacy.pills', 'immediacy', 'none', '\\bhave the pills\\b'),
+      p('distress.vague', 'acute_distress', 'concern', '\\bgoing to do it\\b'),
+      p('si_active.vague', 'suicidal_ideation_active', 'crisis', '\\bgoing to (do it)\\b', {
+        context: { scope: 'adjacent', categories: ['suicidal_ideation_active'], rules: ['immediacy.pills'], pattern: '\\bbridge\\b', flags: 'i' },
+      }),
+      p('si_active.same', 'suicidal_ideation_active', 'crisis', '\\bwill (finish it)\\b', {
+        context: { scope: 'sentence', pattern: '\\brope\\b|\\bfinish\\b', flags: 'i' },
+      }),
+    ],
+    modifiers: [{ id: 'negated.not', modifier: 'negated', pattern: "\\bdon't\\b", flags: 'i', sources: [], relation: 'informed-by' }],
+  };
+  const data = compileData(file);
+  const rules = (text: string) => screenWith(data, text).findings.map((f) => f.ruleId);
+
+  it('a gated match yields no finding without context', () => {
+    expect(rules("I'm going to do it.")).toEqual(['distress.vague']);
+    expect(screenWith(data, "I'm going to do it.").level).toBe('concern');
+  });
+
+  it('adjacent scope: context in the same, previous or next sentence, but not two sentences away', () => {
+    expect(rules("I want to die. I'm going to do it.")).toEqual(['si_active.die', 'si_active.vague']);
+    expect(rules("I'm going to do it. I want to die.")).toEqual(['si_active.vague', 'si_active.die']);
+    expect(rules("I want to die and I'm going to do it.")).toContain('si_active.vague');
+    expect(rules("I want to die. Okay. I'm going to do it.")).toEqual(['si_active.die', 'distress.vague']);
+  });
+
+  it('context can come from a named rule (including immediacy) or from the context regex', () => {
+    const r = screenWith(data, "I have the pills. I'm going to do it.");
+    expect(r.findings.map((f) => f.ruleId)).toEqual(['immediacy.pills', 'si_active.vague']);
+    expect(r.level).toBe('crisis');
+    expect(r.immediacy).toBe(true);
+    expect(rules("The bridge, mostly. I'm going to do it.")).toEqual(['si_active.vague']);
+  });
+
+  it('a negated context finding does not count', () => {
+    expect(rules("I don't want to die. I'm going to do it.")).toEqual(['si_active.die', 'distress.vague']);
+  });
+
+  it('context that overlaps the match does not count, and sentence scope stays in the sentence', () => {
+    expect(rules('I will finish it.')).toEqual([]);
+    expect(rules('I have a rope, so I will finish it.')).toEqual(['si_active.same']);
+    expect(rules('I have a rope. I will finish it.')).toEqual([]);
+  });
+
+  it('rejects malformed contexts, naming only the id', () => {
+    const gated = (context: unknown, category: PatternEntry['category'] = 'suicidal_ideation_active'): PatternFile => ({
+      version: '1.0.0',
+      patterns: [p('si_active.ok', 'suicidal_ideation_active', 'crisis', 'x'), p('si_active.g', category, category === 'immediacy' ? 'none' : 'crisis', 'y', { context: context as PatternEntry['context'] })],
+      modifiers: [],
+    });
+    const cases: [PatternFile, string][] = [
+      [gated({ scope: 'paragraph', pattern: 'z' }), 'has a malformed context'],
+      [gated({ scope: 'adjacent', categories: ['nope'] }), 'names an unknown context category'],
+      [gated({ scope: 'adjacent', categories: ['immediacy'] }), 'names an unknown context category'],
+      [gated({ scope: 'adjacent', rules: ['si_active.missing'] }), 'names an unknown or gated context rule'],
+      [gated({ scope: 'adjacent', rules: ['si_active.g'] }), 'names an unknown or gated context rule'],
+      [gated({ scope: 'adjacent' }), 'has an empty context'],
+      [gated({ scope: 'adjacent', pattern: '(unclosed' }), 'does not compile'],
+      [gated({ scope: 'adjacent', pattern: 'z' }, 'immediacy'), 'is an immediacy pattern and cannot be context-gated'],
+    ];
+    for (const [f, why] of cases) {
+      expect(() => compileData(f)).toThrow(`crisis-signals: si_active.g ${why}`);
+    }
+  });
+});
+
 describe('threatened_by_other (SPEC §4 clarification)', () => {
   it('a literal threat is concern with subject other, even though the subject is a third party', () => {
     const r = screenText('My boyfriend said he\'d kill me if I ever left, and he keeps a knife next to the bed.');
@@ -508,7 +589,7 @@ describe('performance', () => {
     return performance.now() - t0;
   }
 
-  // Measured at about 20 ms (realistic) and under 40 ms (worst adversarial case) on a laptop,
+  // Measured at about 25 ms (realistic) and under 45 ms (worst adversarial case) on a laptop,
   // and about 500 ms on GitHub's shared runners. Catastrophic backtracking takes seconds to
   // minutes on these inputs, so a 3 s limit still catches it without flaking on slow CI.
   const LIMIT_MS = 3000;
@@ -545,6 +626,15 @@ describe('performance', () => {
       'until it until it '.repeat(2_800),
       'relapsed '.repeat(5_600),
       'I wish I could I wish I could '.repeat(1_700),
+      // Context-gated patterns, imagery frames, nuisance and denial cues (0.2.0).
+      "I want to die. I'm going to do it. ".repeat(1_450),
+      "i want to die and im going to do it and ".repeat(1_250),
+      'thinking about how easy it would be to '.repeat(1_300),
+      "after i'm gone ".repeat(3_400),
+      "can't take it anymore traffic ".repeat(1_700),
+      "wanting to die isn't ".repeat(2_400),
+      'since starting my meds '.repeat(2_200),
+      '. like '.repeat(7_200),
       'a'.repeat(50_000),
     ];
     screenText(inputs[0].slice(0, 1000)); // warm up

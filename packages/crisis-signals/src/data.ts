@@ -10,6 +10,7 @@ import patternData from '../data/crisis.patterns.json';
 import { compilePattern } from './regex';
 import type {
   BoundaryCue,
+  ContextScope,
   CrisisCategory,
   CueScope,
   FragmentEntry,
@@ -47,6 +48,7 @@ const CATEGORIES: ReadonlySet<CrisisCategory> = new Set<CrisisCategory>([
 const LEVELS: ReadonlySet<ScreenLevel> = new Set<ScreenLevel>(['none', 'concern', 'crisis']);
 const SET_SCOPES: ReadonlySet<CueScope> = new Set<CueScope>(['forward', 'sentence', 'sentence-or-next', 'within', 'overlap']);
 const BLOCK_SCOPES: ReadonlySet<CueScope> = new Set<CueScope>(['clause', 'sentence', 'sentence-or-next', 'between']);
+const CONTEXT_SCOPES: ReadonlySet<ContextScope> = new Set<ContextScope>(['sentence', 'adjacent']);
 const FRAGMENT_REF = /\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}/g;
 
 /**
@@ -77,12 +79,25 @@ export function expandFragments(ownerId: string, source: string, fragments: Read
   });
 }
 
+/** The compiled context of a context-gated pattern (see `PatternContext`). */
+export interface CompiledContext {
+  scope: ContextScope;
+  /** Categories of ungated detection findings that count as context. */
+  categories: ReadonlySet<CrisisCategory>;
+  /** Ids of ungated detection or immediacy patterns whose findings count as context. */
+  rules: ReadonlySet<string>;
+  /** Regex whose matches count as context. */
+  re?: RegExp;
+}
+
 /** A compiled detection pattern. */
 export interface CompiledPattern {
   entry: PatternEntry;
   re: RegExp;
   /** Position in the data file (stable tie-breaker). */
   order: number;
+  /** Set for context-gated patterns. */
+  context?: CompiledContext;
 }
 
 /** A compiled modifier cue with its defaults resolved. */
@@ -107,7 +122,10 @@ export interface CompiledBoundary {
 /** The compiled pattern file. */
 export interface CompiledData {
   version: string;
+  /** Ungated detection patterns. */
   detection: CompiledPattern[];
+  /** Context-gated detection patterns (`context` set). */
+  gated: CompiledPattern[];
   immediacy: CompiledPattern[];
   cues: CompiledCue[];
   boundaries: CompiledBoundary[];
@@ -124,13 +142,27 @@ export function compileData(file: PatternFile): CompiledData {
   const fragments = resolveFragments(file.fragments);
   const source = (id: string, pattern: string): string => expandFragments(id, pattern, fragments);
   const detection: CompiledPattern[] = [];
+  const gated: CompiledPattern[] = [];
   const immediacy: CompiledPattern[] = [];
+  const ungatedIds = new Set(file.patterns.filter((p) => p.context === undefined).map((p) => p.id));
   file.patterns.forEach((entry, order) => {
     if (!CATEGORIES.has(entry.category) || !LEVELS.has(entry.level)) {
       throw new Error(`crisis-signals: ${entry.id} has an unknown category or level`);
     }
-    const compiled = { entry, re: compilePattern(entry.id, source(entry.id, entry.pattern), entry.flags, true), order };
-    (entry.category === 'immediacy' ? immediacy : detection).push(compiled);
+    const compiled: CompiledPattern = {
+      entry,
+      re: compilePattern(entry.id, source(entry.id, entry.pattern), entry.flags, true),
+      order,
+    };
+    if (entry.context !== undefined) {
+      if (entry.category === 'immediacy') {
+        throw new Error(`crisis-signals: ${entry.id} is an immediacy pattern and cannot be context-gated`);
+      }
+      compiled.context = compileContext(entry, ungatedIds, source);
+      gated.push(compiled);
+    } else {
+      (entry.category === 'immediacy' ? immediacy : detection).push(compiled);
+    }
   });
 
   const cues = file.modifiers.map((entry): CompiledCue => {
@@ -163,7 +195,36 @@ export function compileData(file: PatternFile): CompiledData {
     strong: entry.strength === 'strong',
   }));
 
-  return { version: file.version, detection, immediacy, cues, boundaries };
+  return { version: file.version, detection, gated, immediacy, cues, boundaries };
+}
+
+/**
+ * Validate and compile a pattern's `context`. Context may name only ungated
+ * patterns, so gates never depend on each other. Errors name the pattern id only.
+ */
+function compileContext(
+  entry: PatternEntry,
+  ungatedIds: ReadonlySet<string>,
+  source: (id: string, pattern: string) => string,
+): CompiledContext {
+  const ctx = entry.context as NonNullable<PatternEntry['context']>;
+  const fail = (why: string): never => {
+    throw new Error(`crisis-signals: ${entry.id} ${why}`);
+  };
+  if (typeof ctx !== 'object' || ctx === null || !CONTEXT_SCOPES.has(ctx.scope)) fail('has a malformed context');
+  const categories = ctx.categories ?? [];
+  const rules = ctx.rules ?? [];
+  if (!Array.isArray(categories) || !categories.every((c) => CATEGORIES.has(c) && c !== 'immediacy')) {
+    fail('names an unknown context category');
+  }
+  if (!Array.isArray(rules) || !rules.every((r) => ungatedIds.has(r))) fail('names an unknown or gated context rule');
+  if (categories.length === 0 && rules.length === 0 && ctx.pattern === undefined) fail('has an empty context');
+  return {
+    scope: ctx.scope,
+    categories: new Set(categories),
+    rules: new Set(rules),
+    re: ctx.pattern === undefined ? undefined : compilePattern(entry.id, source(entry.id, ctx.pattern), ctx.flags),
+  };
 }
 
 /** The bundled, compiled pattern file. */

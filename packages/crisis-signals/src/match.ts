@@ -24,14 +24,23 @@ export const LEVEL_RANK: Record<ScreenLevel, number> = { none: 0, concern: 1, cr
  * file. Results are in text order.
  */
 export function matchPatterns(text: string, patterns: readonly CompiledPattern[]): Match[] {
+  return dedupe(collectMatches(text, patterns));
+}
+
+/** All matches of `patterns`, overlaps included, in pattern order. */
+export function collectMatches(text: string, patterns: readonly CompiledPattern[]): Match[] {
   const all: Match[] = [];
   for (const pattern of patterns) {
     for (const span of findCores(pattern.re, text)) all.push({ ...span, pattern });
   }
-  return dedupe(all);
+  return all;
 }
 
-function dedupe(matches: Match[]): Match[] {
+/**
+ * Remove overlapping matches (see {@link matchPatterns} for the order of
+ * preference). Results are in text order.
+ */
+export function dedupe(matches: readonly Match[]): Match[] {
   const byPriority = [...matches].sort(
     (a, b) =>
       LEVEL_RANK[b.pattern.entry.level] - LEVEL_RANK[a.pattern.entry.level] ||

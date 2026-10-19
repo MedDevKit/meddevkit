@@ -16,6 +16,8 @@ export type {
   ScreenResult,
   SourceRelation,
   PatternEntry,
+  PatternContext,
+  ContextScope,
   ModifierCueName,
   ModifierCue,
   CueScope,

@@ -28,8 +28,8 @@ Lifeline) on `crisis`.
 - **No logging.** It does not log, store or send text, and errors never
   contain text. Findings carry offsets and spans of at most 120 characters.
 - **Zero runtime dependencies.** Works in Node >= 18 and the browser.
-- **Linear time.** A 50,000-character input screens in about 20 ms on a
-  laptop (under 40 ms for the worst adversarial input in the test suite);
+- **Linear time.** A 50,000-character input screens in about 25 ms on a
+  laptop (under 45 ms for the worst adversarial input in the test suite);
   every repetition in the patterns is bounded, and the test suite includes
   adversarial inputs to guard against regex backtracking.
 - **English only** (v1). Risk to others is out of scope (v1); a threat
@@ -55,7 +55,7 @@ const r = screenText('I keep thinking about ending it. Maybe tonight.');
 //   { ruleId: 'immediacy.timing', category: 'immediacy', baseLevel: 'none',
 //     level: 'crisis', text: 'tonight', ... }
 // ]
-// r.patternsVersion -> '0.1.0'
+// r.patternsVersion -> '0.2.0'
 
 screenText('This commute is killing me.').level;            // 'none' (idiom, finding kept)
 screenText("I'm not going to hurt myself.").level;          // 'concern' (negated, never 'none')
@@ -111,8 +111,19 @@ Context rules worth knowing:
   procedure ("how do people know if…", "would you have to report it?") are
   `hypothetical`.
 - **Negation is scoped** to the clause after the cue, and pseudo-negations
-  ("not sure", "don't know", "can't stop") do not count. A denial of
-  self-harm is still `concern`, because it is worth a human look.
+  ("not sure", "don't know", "can't stop") do not count. It does not reach
+  into a later subordinate clause with its own first-person subject ("so
+  she's not stuck after I'm gone"). A denial can also follow the crisis
+  wording ("wanting to die isn't what this is", "hurting myself has never
+  been part of it"). A denial of self-harm is still `concern`, because it is
+  worth a human look.
+- **Vague wording counts only in context.** "I'm going to finish it", "how
+  I'd do it", "for when they find me" or "this is it" is crisis language
+  only when crisis language, lethal means, a plan, preparation or a high
+  place appears in the same, previous or next sentence (see
+  [Context-gated patterns](#context-gated-patterns)). Final-sounding
+  statements that are alarming on their own ("this is the last time you'll
+  hear from me", "nobody can talk me out of it") are `concern`.
 - **`immediacy`** (plan, means, timing, preparation) is set only when a
   non-negated `crisis` finding is present in the same text. It never lowers a
   level.
@@ -131,13 +142,20 @@ The raw file is also shipped in the package as
 
 ```jsonc
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "fragments": [  // named regex pieces, referenced as {{ID}}
     { "id": "SELF", "pattern": "\\b(?:i|im|i['’]m|i\\s+am|ive|i['’]ve|…)\\b", "note": "…", "sources": [], "relation": "informed-by" }
   ],
   "patterns": [   // detection patterns
     { "id": "si_active.ending_it", "category": "suicidal_ideation_active", "level": "crisis",
-      "pattern": "…", "flags": "i", "note": "…", "sources": ["srl-v1.0", "nimh-asq"], "relation": "informed-by" }
+      "pattern": "…", "flags": "i", "note": "…", "sources": ["srl-v1.0", "nimh-asq"], "relation": "informed-by" },
+    { "id": "si_active.vague_act_in_context", "category": "suicidal_ideation_active", "level": "crisis",
+      "pattern": "…", "flags": "i", "note": "…", "sources": ["srl-v1.0"], "relation": "informed-by",
+      "context": {  // context-gated: a match counts only with this context nearby
+        "scope": "adjacent",
+        "categories": ["suicidal_ideation_passive", "suicidal_ideation_active", "self_harm", "unsafe_with_self", "history"],
+        "rules": ["immediacy.plan", "immediacy.means", "immediacy.preparation", "immediacy.location"],
+        "pattern": "{{DROP}}|{{LETHAL}}|…", "flags": "i" } }
   ],
   "modifiers": [  // context cues
     { "id": "negated.not", "modifier": "negated", "scope": "forward", "maxGap": 50, "pattern": "…", … },
@@ -155,8 +173,9 @@ fragment as `{{ID}}`; the loader replaces each reference with
 listed before it. Fragments hold the shared frames and vocabulary slots: a
 first-person subject (`SELF`), bounded fillers (`FILL`, hedges, intensifiers,
 auxiliaries and negations), a clause start for subjectless texting (`START`),
-and slots such as `IDEATE`, `INTEND`, `CANT`, `PILLS`, `MEANS`, `BODY`,
-`SH_MARK` and `TIMING`. Another runtime that vendors the file must apply the
+imagery and urge frames (`IMAGINE`), and slots such as `IDEATE`, `INTEND`,
+`CANT`, `PILLS`, `MEANS`, `LETHAL`, `DROP` (high places and tracks), `BODY`,
+`SH_MARK`, `TIMING`, `PERMANENT` and `NUISANCE` (everyday annoyances). Another runtime that vendors the file must apply the
 same substitution (one regex replace).
 
 **Finding span.** When a capturing group takes part in a match, the first such
@@ -179,6 +198,35 @@ findings in the same or the previous sentence, and a `between` block cancels a
 A cue with `"categories": [...]` acts only on findings of those categories
 (for example the literal-threat evidence that keeps a `threatened_by_other`
 finding from being read as an idiom).
+
+#### Context-gated patterns
+
+A detection pattern with a `context` object is context-gated. It is for vague
+or anaphoric wording that is crisis language only in context: "I've thought
+about it a lot and I'm going to finish it. I'm done being alive", but not
+"I'm going to finish it this weekend, the deck ships Monday". A gated match
+yields a finding only when, within `scope` (`sentence`: the same sentence;
+`adjacent`: the same sentence, the one before it, or the one after it), at
+least one of these is present and does not overlap the match itself:
+
+- a finding of an ungated detection pattern whose category is listed in
+  `categories`, or of an ungated detection or immediacy pattern whose id is
+  listed in `rules`, that is neither negated nor suppressed as an idiom
+  (past, quoted or third-party context still counts: "I tried to end my life
+  in 2019. This time I'm going to finish what I started"); or
+- a match of `pattern` (with `flags`; fragments allowed, no capturing
+  groups), for vocabulary that is not a finding of its own ("I keep thinking
+  about how I'd do it. The bridge, mostly").
+
+Context comes only from ungated patterns, so gates never depend on each other
+and the order of evaluation does not matter. Passing gated matches then
+compete with the ungated matches for overlaps as usual (the higher base level
+wins), and modifiers apply to them like any other finding. A gate never lowers
+anything: without its context, a gated match is simply not a finding, and an
+ungated pattern can cover the same wording at a lower level
+(`distress.vague_finality`). Another runtime implements a gate in a few lines:
+collect the ungated findings and their modifiers, then keep each gated match
+whose sentence window holds qualifying context.
 
 Every regex stays within a portable subset (no named groups, `\p{…}`, inline
 flags, atomic or possessive groups, variable-width lookbehind, `\Z`/`\z` or

@@ -9,6 +9,10 @@
  * the engine does: the first capturing group is the span, and an empty first
  * group is a veto that yields no finding. A fragment's example must match the
  * fragment as a whole string.
+ *
+ * Context-gated patterns are counted on their regex alone; their positive
+ * example includes the context, so it also yields a finding through the
+ * engine, and GATED_WITHOUT_CONTEXT shows each one yielding nothing without it.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -45,6 +49,12 @@ const EXAMPLES: Record<string, [string, string]> = {
   TIMING: ['tonight', 'last night'],
   RELATION: ['stepdad', 'stepladder'],
   PERSON: ['my ex', 'my car'],
+  PERMANENT: ['for good', 'for now'],
+  DROP: ['fire escape', 'escape'],
+  LETHAL: ['shotgun', 'shot'],
+  IMAGINE: ['part of me wants to', 'part of me'],
+  IMAGERY_FILL: [' how easy it would be to', ' how it would be'],
+  NUISANCE: ['leaf blower', 'leaf'],
 
   // suicidal_ideation_passive
   'si_passive.better_off_without_me': ['My family would honestly be fine without me.', 'The team will be fine without me for a week.'],
@@ -74,6 +84,9 @@ const EXAMPLES: Record<string, [string, string]> = {
   'si_passive.not_make_it_alive': ["There's no way I'm making it through this week alive.", "There's no way I'm making it through this week of meetings."],
   'si_passive.want_life_over': ['I hate my life and I want it to be over.', 'I want this meeting to be over.'],
   'si_passive.life_is_a_burden': ['Life feels like a weight I can no longer carry.', 'This box feels like a weight.'],
+  'si_passive.erase_myself': ['If I could press a button and just be erased I would.', 'I pressed a button to erase the file.'],
+  'si_passive.fade_in_context': ['I feel like fading out. Not for a while, permanently.', 'I feel like fading out of this group chat.'],
+  'si_passive.gone_in_context': ["I paid off my credit cards so my wife isn't stuck after I'm gone.", "I'll water the plants while I'm away."],
   // suicidal_ideation_active
   'si_active.kill_myself': ['i keep thinkin about killin myself', 'Can you kill the process?'],
   'si_active.end_my_life': ['I want to end my life.', 'This is the end of my shift.'],
@@ -87,6 +100,9 @@ const EXAMPLES: Record<string, [string, string]> = {
   'si_active.suicide_note_plan': ['I wrote my suicide note.', 'The suicide squeeze is a risky play.'],
   'si_active.ways_to_die': ["I've been researching how many pills it would take.", 'How many pills do I take a day?'],
   'si_active.method_fantasy': ['Most nights I think about leaving the engine running.', 'I left the engine running while I grabbed coffee.'],
+  'si_active.method_imagery': ['I keep thinking about not braking at the next curve.', 'I keep thinking about braking earlier at the next curve.'],
+  'si_active.method_in_context': ['Standing on my balcony I pictured stepping off.', 'I pictured stepping off the train in Paris.'],
+  'si_active.vague_act_in_context': ["I've got the pills. I'm going to finish it tonight.", "I'm going to finish it with him tonight."],
   'si_active.enough_to_die': ["I've got enough of my meds saved up to not wake up.", 'I have enough meds for the trip.'],
   'si_active.intent_not_alive': ["I don't plan on being alive this time next year.", "I don't plan on being here for the meeting."],
   'si_active.want_out_of_life': ['i want out. not out of the job, out of life.', 'I want out of this contract.'],
@@ -147,6 +163,8 @@ const EXAMPLES: Record<string, [string, string]> = {
   'distress.life_falling_apart': ['help idk what to do everythings falling apart', 'The project is falling apart.'],
   'distress.physical': ['My anxiety is through the roof.', 'Prices are through the roof.'],
   'distress.no_exit': ["I feel like I'm stuck in a cage and there's no exit.", 'There is no exit on this floor.'],
+  'distress.vague_finality': ["This is the last time you'll hear from me.", "This is the last time you'll hear from me before the move."],
+  'distress.negated_state': ["I'm not crying, it's allergies.", "I'm crying."],
   // history
   'history.past_attempt': ['After my attempt I took a year off.', 'My attempt at baking failed.'],
   'history.psych_admission': ['I was in a psych ward in college.', 'I was hospitalized for a broken leg.'],
@@ -170,6 +188,7 @@ const EXAMPLES: Record<string, [string, string]> = {
   'negated.nor': ['Neither am I.', 'Nothing.'],
   'negated.denies': ['Patient denies suicidal ideation.', 'Patient describes suicidal ideation.'],
   'negated.post_denial': ["Suicide isn't on the table for me.", 'Suicide is a leading cause of death.'],
+  'negated.block_subordinate': ["so she's not stuck after I'm gone", 'after the meeting'],
   // third_party
   'third_party.he_she': ['She said it.', 'The said it.'],
   'third_party.relation': ['Our neighbor\'s kid said it.', 'My own words.'],
@@ -205,6 +224,8 @@ const EXAMPLES: Record<string, [string, string]> = {
   'past.at_first': ['At first it was hard.', 'It was first.'],
   'past.history_of': ['I have a history of it.', 'I like history.'],
   'past.stretch': ['There was a stretch in my twenties when I struggled.', 'There was a stretch of road.'],
+  'past.prior_event': ['I mentioned my past overdose.', 'I mentioned my last overdose.'],
+  'past.stopped_since': ["Since starting meds they've stopped completely.", 'Since starting meds I feel tired.'],
   'past.block_recent': ['It happened last night.', 'It happened last year.'],
   'past.block_present_tense': ["I'm sad.", 'I was sad.'],
   // resolved
@@ -216,6 +237,8 @@ const EXAMPLES: Record<string, [string, string]> = {
   'resolved.time_since': ["It's been two years.", "It's been raining."],
   'resolved.recovered': ["I've recovered.", "I've recorded it."],
   'resolved.not_anymore': ["I don't do that anymore.", "I don't like that anymore."],
+  'resolved.stopped_since': ["Since starting meds they've stopped completely.", 'Since starting meds I feel tired.'],
+  'resolved.not_current': ["That was years ago and it's not a current issue.", "It's a current issue."],
   // idiom
   'idiom.thing_killing_me': ['This commute is killing me.', 'The depression is killing me.'],
   'idiom.someone_will_kill_me': ['Coach is going to kill us at practice.', 'I wish someone would kill me.'],
@@ -240,6 +263,11 @@ const EXAMPLES: Record<string, [string, string]> = {
   'idiom.exhausted_after': ["I'm broken after leg day.", "I'm broken."],
   'idiom.head_against_wall': ["I've been banging my head against the wall trying to fix this bug.", 'I bang my head against the wall when the noise gets too loud.'],
   'idiom.embarrassment': ['I wanted the floor to swallow me.', 'I wanted the floor to be clean.'],
+  'idiom.hill_to_die_on': ["This is the hill I'll die on.", "I'll die on the way up this hill."],
+  'idiom.deceased': ['i was deceased', 'he is deceased'],
+  'idiom.nuisance_cant_take': ["I can't take it anymore, the traffic is insane.", "I can't take it anymore, my thoughts are insane."],
+  'idiom.nuisance_kill_me': ['Kill me, three more hours of this webinar.', 'Kill me, I hate myself.'],
+  'idiom.block_inner_experience': ['the noise in my head', 'the noise in the street'],
   'idiom.block_literal_threat': ['He keeps a knife next to the bed.', 'He keeps a book next to the bed.'],
   // quoted
   'quoted.double': ['The song goes "I want to die".', 'The song goes on.'],
@@ -255,11 +283,19 @@ const EXAMPLES: Record<string, [string, string]> = {
   'boundary.subordinate': ['because I left', 'the causeway'],
 };
 
+/** Context-gated pattern id -> a text its regex matches but that has no context, so it yields no finding. */
+const GATED_WITHOUT_CONTEXT: Record<string, string> = {
+  'si_passive.fade_in_context': 'I feel like fading out.',
+  'si_passive.gone_in_context': "The garden will be overgrown after I'm gone.",
+  'si_active.method_in_context': 'I pictured stepping off.',
+  'si_active.vague_act_in_context': "I'm going to finish it tonight.",
+};
+
 const fragments = file.fragments ?? [];
 const all = [...fragments, ...file.patterns, ...file.modifiers, ...(file.boundaries ?? [])];
 const data = compileData(file);
 const expanded = resolveFragments(file.fragments);
-const detectionById = new Map([...data.detection, ...data.immediacy].map((p) => [p.entry.id, p.re]));
+const detectionById = new Map([...data.detection, ...data.gated, ...data.immediacy].map((p) => [p.entry.id, p.re]));
 const cueById = new Map<string, RegExp>([
   ...data.cues.map((c): [string, RegExp] => [c.entry.id, c.re]),
   ...data.boundaries.map((b): [string, RegExp] => [b.entry.id, b.re]),
@@ -303,8 +339,8 @@ describe('pattern file shape', () => {
   };
   const NOTICE_KEYS = new Set(['srl-v1.0', 'nimh-asq', 'nimh-warning-signs']);
 
-  it('is version 0.1.0', () => {
-    expect(file.version).toBe('0.1.0');
+  it('is version 0.2.0', () => {
+    expect(file.version).toBe('0.2.0');
   });
 
   it('ids are unique and use the category, modifier or fragment convention', () => {
@@ -346,7 +382,10 @@ describe('pattern file shape', () => {
   });
 
   it('every fragment is used, and only fragments listed earlier are referenced', () => {
-    const sources = [...fragments, ...file.patterns, ...file.modifiers, ...(file.boundaries ?? [])].map((e) => e.pattern);
+    const sources = [
+      ...[...fragments, ...file.patterns, ...file.modifiers, ...(file.boundaries ?? [])].map((e) => e.pattern),
+      ...file.patterns.flatMap((p) => (p.context?.pattern === undefined ? [] : [p.context.pattern])),
+    ];
     for (const f of fragments) {
       expect(sources.some((s) => s.includes(`{{${f.id}}}`)), `${f.id} is used`).toBe(true);
     }
@@ -365,6 +404,22 @@ describe('detection patterns produce findings through the engine', () => {
     it(`${p.id} positive yields a finding with that rule`, () => {
       const r = screenText(EXAMPLES[p.id][0], { suppressIdioms: false });
       expect(r.findings.map((f) => f.ruleId)).toContain(p.id);
+    });
+  }
+});
+
+describe('context-gated patterns', () => {
+  const gated = file.patterns.filter((p) => p.context !== undefined).map((p) => p.id);
+
+  it('every gated pattern has a no-context example, and only gated patterns do', () => {
+    expect(Object.keys(GATED_WITHOUT_CONTEXT).sort()).toEqual([...gated].sort());
+  });
+
+  for (const id of gated) {
+    it(`${id}: matches without context but yields no finding`, () => {
+      const text = GATED_WITHOUT_CONTEXT[id];
+      expect(count(id, text), text).toBeGreaterThan(0);
+      expect(screenText(text, { suppressIdioms: false }).findings.map((f) => f.ruleId)).not.toContain(id);
     });
   }
 });

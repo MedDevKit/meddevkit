@@ -136,6 +136,11 @@ Modifier precedence: `idiom` > `third_party` > (`past` + `resolved`) >
   is plausible, keep `concern`, per recall first. Full risk-to-others
   handling is still v2 (D5).
 
+- **General questions vs named third parties** (round 3). "How do people
+  know if…" or "what are the warning signs" with no specific person is
+  `hypothetical` → `concern`. A named or specific other person ("my student
+  told me she…") is `third_party` → `none`.
+
 ## 5. API
 
 ### TypeScript
@@ -246,6 +251,12 @@ package README section on the pattern file is the normative description:
   with `sentence-or-next` scope blocks findings in the same or the next
   sentence.
 - `boundaries`: clause-boundary cues that limit scope.
+- Context-gated patterns (round 3): a pattern with `context: {scope:
+  sentence|adjacent, categories?, rules?, pattern?}` yields a finding only
+  when an ungated, non-negated, non-idiom finding of those categories or rules,
+  or a hit of the context regex, appears in the same sentence (or, for
+  `adjacent`, the previous or next one). Used for vague references ("finish
+  it") that are crisis only in context.
 
 Offsets are UTF-16 code units in TypeScript. The Python port must convert
 them, or document the difference.

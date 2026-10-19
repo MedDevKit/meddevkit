@@ -6,7 +6,8 @@
  */
 
 import { DATA, type CompiledData } from './data';
-import { LEVEL_RANK, matchPatterns, type Match } from './match';
+import { passingGates } from './gate';
+import { LEVEL_RANK, collectMatches, dedupe, matchPatterns, type Match } from './match';
 import { resolveFinding } from './resolve';
 import { CueIndex, type ModifierState } from './scope';
 import { indexText } from './text';
@@ -77,9 +78,21 @@ export function screenWith(data: CompiledData, text: string, options?: ScreenOpt
   }
 
   const index = indexText(text, data.boundaries);
-  const detection = matchPatterns(text, data.detection);
+  const ungatedRaw = collectMatches(text, data.detection);
+  let detection = dedupe(ungatedRaw);
   const immediacy = matchPatterns(text, data.immediacy);
-  const cues = new CueIndex(text, data.cues, index, detection);
+  let cues = new CueIndex(text, data.cues, index, detection);
+
+  // Context-gated patterns: keep a match only when its context is nearby,
+  // then resolve overlaps against the ungated matches and re-index the cues.
+  const passing = passingGates(
+    { text, index, cues, suppressIdioms, detection, immediacy },
+    collectMatches(text, data.gated),
+  );
+  if (passing.length > 0) {
+    detection = dedupe([...ungatedRaw, ...passing]);
+    cues = new CueIndex(text, data.cues, index, detection);
+  }
 
   const findings: ScreenFinding[] = [];
   let level: ScreenLevel = 'none';
