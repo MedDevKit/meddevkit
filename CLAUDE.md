@@ -24,6 +24,7 @@ MedDevKit/
 │       └── tests/
 │   └── adapter-azure/            # @meddevkit/adapter-azure (Azure Text Analytics for health)
 │   └── crisis-signals/           # @meddevkit/crisis-signals (flags first-person crisis language; unreviewed)
+│   └── crisis-adapter-nope/      # @meddevkit/crisis-adapter-nope (opt-in second opinion from self-hosted nope-edge; unreviewed)
 ├── package.json                  # Root monorepo config
 ├── pnpm-workspace.yaml
 └── tsconfig.base.json
@@ -133,7 +134,7 @@ feat(chunker): Add respiratory rate pattern detection
 ## Package Publishing
 
 Published by `.github/workflows/release.yml` via npm trusted publishing (no token/OTP; never publish locally). Each package releases on its own tag:
-`chunker-v<version>` for @meddevkit/chunker, `adapter-azure-v<version>` for @meddevkit/adapter-azure, `crisis-signals-v<version>` for @meddevkit/crisis-signals.
+`chunker-v<version>` for @meddevkit/chunker, `adapter-azure-v<version>` for @meddevkit/adapter-azure, `crisis-signals-v<version>` for @meddevkit/crisis-signals, `crisis-adapter-nope-v<version>` for @meddevkit/crisis-adapter-nope.
 
 1. Bump `version` in the package's `package.json` and add a `CHANGELOG.md` entry; merge to main via PR
    - `packages/chunker/README.md` and `LICENSE` are copies of the root files (npm needs them in the package dir); CI fails if they differ

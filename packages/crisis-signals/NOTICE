@@ -14,7 +14,7 @@ sources that informed it (the `sources` field, using the keys below) and its
 - `adapted-from`: close to the source's wording, so the source's licence
   terms apply.
 
-In pattern version 0.1.0 every entry is `informed-by`. No entry is
+In pattern version 0.2.0 every entry is `informed-by`. No entry is
 `adapted-from` a source, no source list or term set was copied or converted
 into patterns, and no source data files are redistributed with this package.
 Entries with an empty `sources` list are original to this package.

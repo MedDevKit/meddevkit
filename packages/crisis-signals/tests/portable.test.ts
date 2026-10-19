@@ -1,6 +1,6 @@
 /**
- * Portable regex subset (SPEC §6): every fragment, pattern, cue and boundary
- * in the data file compiles with the `u` flag once its `{{fragment}}`
+ * Portable regex subset (SPEC §6): every fragment, pattern, context regex,
+ * cue and boundary in the data file compiles with the `u` flag once its `{{fragment}}`
  * references are expanded, uses only `i` (or no) flags, and avoids syntax
  * that differs between ECMAScript and Python `re`.
  */
@@ -16,10 +16,15 @@ const file = JSON.parse(
 ) as PatternFile;
 
 const fragments = resolveFragments(file.fragments);
-type Entry = { id: string; pattern: string; flags?: string; kind: 'fragment' | 'pattern' | 'cue' | 'boundary' };
+type Entry = { id: string; pattern: string; flags?: string; kind: 'fragment' | 'pattern' | 'context' | 'cue' | 'boundary' };
+/** Regexes of context-gated patterns' `context.pattern`, as entries of their own. */
+const contexts = file.patterns.flatMap((e) =>
+  e.context?.pattern === undefined ? [] : [{ id: `${e.id} (context)`, pattern: e.context.pattern, flags: e.context.flags }],
+);
 const entries: Entry[] = [
   ...(file.fragments ?? []).map((e): Entry => ({ id: e.id, pattern: fragments.get(e.id) as string, flags: 'i', kind: 'fragment' })),
   ...file.patterns.map((e): Entry => ({ ...e, pattern: expandFragments(e.id, e.pattern, fragments), kind: 'pattern' })),
+  ...contexts.map((e): Entry => ({ ...e, pattern: expandFragments(e.id, e.pattern, fragments), kind: 'context' })),
   ...file.modifiers.map((e): Entry => ({ ...e, pattern: expandFragments(e.id, e.pattern, fragments), kind: 'cue' })),
   ...(file.boundaries ?? []).map((e): Entry => ({ ...e, pattern: expandFragments(e.id, e.pattern, fragments), kind: 'boundary' })),
 ];
@@ -37,13 +42,13 @@ describe('portable regex subset', () => {
   });
 
   it('flags are only "i" or empty', () => {
-    for (const e of [...file.patterns, ...file.modifiers, ...(file.boundaries ?? [])]) {
+    for (const e of [...file.patterns, ...contexts, ...file.modifiers, ...(file.boundaries ?? [])]) {
       expect(['', 'i'], e.id).toContain(e.flags ?? '');
     }
   });
 
   it('no entry uses non-portable syntax (raw and expanded)', () => {
-    const raw = [...(file.fragments ?? []), ...file.patterns, ...file.modifiers, ...(file.boundaries ?? [])];
+    const raw = [...(file.fragments ?? []), ...file.patterns, ...contexts, ...file.modifiers, ...(file.boundaries ?? [])];
     const problems = [
       ...entries.map((e) => ({ id: e.id, issues: lintPortable(e.pattern) })),
       ...raw.map((e) => ({ id: `${e.id} (raw)`, issues: lintPortable(e.pattern) })),
@@ -58,7 +63,7 @@ describe('portable regex subset', () => {
     }
   });
 
-  it('only detection patterns use capturing groups (the finding span); fragments and cues do not', () => {
+  it('only detection patterns use capturing groups (the finding span); fragments, contexts and cues do not', () => {
     for (const e of entries) {
       if (e.kind === 'pattern') continue;
       expect(groups(e.pattern), e.id).toBe(0);

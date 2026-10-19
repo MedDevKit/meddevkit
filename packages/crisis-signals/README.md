@@ -4,8 +4,48 @@ A keyword-and-context screen for first-person crisis language. It is not a diagn
 
 > **Status: in development, unreviewed.** No clinician has reviewed the
 > categories, the level mapping, the patterns or the test vectors yet. Do not
-> describe this screen as validated. Metrics (recall, false-alarm rates) are to
-> be published after the held-out evaluation and clinical review.
+> describe this screen as validated. The measured limits below come from
+> synthetic test vectors, not from clinical review or real-world use.
+
+## Measured limits
+
+On text it was not written against, it caught about half of crisis
+statements. Use it as an explainable, fast, offline first-pass signal, never
+as the only safeguard.
+
+Patterns version 0.2.0. All vectors are synthetic and unreviewed; intervals
+are Wilson 95% confidence intervals.
+
+| Set | Crisis recall | Any-flag recall | Grief false alarms (→ `crisis`) | Idiom and everyday false alarms |
+|---|---|---|---|---|
+| **Held-out v2, written blind (167 vectors). The honest number.** | 15/31 = 48.4% (32.0–65.2%) | 36/56 = 64.3% (51.2–75.5%) | 0/14 (0–21.5%) | 2/34 = 5.9% (1.6–19.1%) |
+| Dev (534 vectors; patterns written against it) | 172/172 | 245/245 | 0/28 | 0/134 |
+
+The dev numbers show only that the patterns match the text they were written
+for. The held-out numbers are the ones to plan around, and the small sample
+gives them wide intervals.
+
+**What it misses.** Mostly oblique language: preparation described without
+any crisis words, imagery of a method or of an outcome, and wishes expressed
+by their meaning rather than by recognisable wording. Keyword-and-context
+rules plateau on this kind of text; more rounds of patterns mostly fit the dev
+set.
+
+**What it does well.**
+
+- Explicit first-person statements of suicidal thoughts, self-harm or feeling
+  unsafe with oneself, including slang and texting spellings.
+- Context: negation, past and resolved distress, hypotheticals, quotations,
+  third parties and idioms change a finding's level, and the finding is kept.
+- Explainability: every flag carries a rule id, matched span, offsets and
+  modifiers, and the full pattern list is public.
+- Speed and offline use: deterministic, no network calls, no dependencies,
+  about 25 ms for 50,000 characters.
+
+**Recommendation.** Combine it with a second opinion (see
+[Second opinion (opt-in)](#second-opinion-opt-in); the
+`@meddevkit/crisis-adapter-nope` adapter is in development) and with a human
+review process. A `none` result does not mean the text is safe.
 
 ## What it does
 
@@ -28,8 +68,8 @@ Lifeline) on `crisis`.
 - **No logging.** It does not log, store or send text, and errors never
   contain text. Findings carry offsets and spans of at most 120 characters.
 - **Zero runtime dependencies.** Works in Node >= 18 and the browser.
-- **Linear time.** A 50,000-character input screens in about 20 ms on a
-  laptop (under 40 ms for the worst adversarial input in the test suite);
+- **Linear time.** A 50,000-character input screens in about 25 ms on a
+  laptop (under 45 ms for the worst adversarial input in the test suite);
   every repetition in the patterns is bounded, and the test suite includes
   adversarial inputs to guard against regex backtracking.
 - **English only** (v1). Risk to others is out of scope (v1); a threat
@@ -55,7 +95,7 @@ const r = screenText('I keep thinking about ending it. Maybe tonight.');
 //   { ruleId: 'immediacy.timing', category: 'immediacy', baseLevel: 'none',
 //     level: 'crisis', text: 'tonight', ... }
 // ]
-// r.patternsVersion -> '0.1.0'
+// r.patternsVersion -> '0.2.0'
 
 screenText('This commute is killing me.').level;            // 'none' (idiom, finding kept)
 screenText("I'm not going to hurt myself.").level;          // 'concern' (negated, never 'none')
@@ -111,13 +151,63 @@ Context rules worth knowing:
   procedure ("how do people know if…", "would you have to report it?") are
   `hypothetical`.
 - **Negation is scoped** to the clause after the cue, and pseudo-negations
-  ("not sure", "don't know", "can't stop") do not count. A denial of
-  self-harm is still `concern`, because it is worth a human look.
+  ("not sure", "don't know", "can't stop") do not count. It does not reach
+  into a later subordinate clause with its own first-person subject ("so
+  she's not stuck after I'm gone"). A denial can also follow the crisis
+  wording ("wanting to die isn't what this is", "hurting myself has never
+  been part of it"). A denial of self-harm is still `concern`, because it is
+  worth a human look.
+- **Vague wording counts only in context.** "I'm going to finish it", "how
+  I'd do it", "for when they find me" or "this is it" is crisis language
+  only when crisis language, lethal means, a plan, preparation or a high
+  place appears in the same, previous or next sentence (see
+  [Context-gated patterns](#context-gated-patterns)). Final-sounding
+  statements that are alarming on their own ("this is the last time you'll
+  hear from me", "nobody can talk me out of it") are `concern`.
 - **`immediacy`** (plan, means, timing, preparation) is set only when a
   non-negated `crisis` finding is present in the same text. It never lowers a
   level.
 - The text's level is the maximum over its findings, so the writer's own
   statement wins over an idiom or a third-party finding elsewhere.
+
+## Second opinion (opt-in)
+
+`screenTextWithSecondOpinion` combines the offline screen with one model or
+API classifier that you configure. **Text leaves the device only if you
+install and configure an adapter**; `screenText` alone never sends anything,
+and this package makes no network calls itself.
+
+```ts
+import { screenTextWithSecondOpinion } from '@meddevkit/crisis-signals';
+
+const r = await screenTextWithSecondOpinion(text, adapter, { timeoutMs: 10000 });
+// r.level, r.immediacy   combined
+// r.local                exactly what screenText(text) returns
+// r.secondOpinion        { name, version, status: 'ok'|'error'|'timeout'|'invalid', result?, reason?, durationMs }
+// r.degraded             true when the adapter did not return a valid result
+// r.raisedBy             'local' | 'secondOpinion' | 'both' | 'none'
+```
+
+Combination rules:
+
+- The offline result is computed first and returned unchanged as `local`.
+- The final level is the **maximum** of the two: a model can raise a level,
+  never lower it. `raisedBy: 'secondOpinion'` means the flag has no rule,
+  span or modifiers behind it; route it to a person like any other flag.
+- An opinion about someone else (`subject: 'other'`) raises at most to
+  `concern`. Adapters for providers that cannot tell the subject raise at
+  most to `concern`.
+- `immediacy` is the local flag, or the model's when the final level is
+  `crisis`.
+- If the adapter throws, times out (default 10 s) or returns an invalid
+  result, you get the local level with `degraded: true`. The outcome never
+  contains input text or the provider's error message.
+- Aborting your `signal` rejects with an `AbortError` and aborts the
+  adapter's request.
+
+Adapters implement the `CrisisSecondOpinion` interface and are separate
+packages. The first, `@meddevkit/crisis-adapter-nope` (self-hosted
+nope-edge), is in development.
 
 ## Patterns are public
 
@@ -131,13 +221,20 @@ The raw file is also shipped in the package as
 
 ```jsonc
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "fragments": [  // named regex pieces, referenced as {{ID}}
     { "id": "SELF", "pattern": "\\b(?:i|im|i['’]m|i\\s+am|ive|i['’]ve|…)\\b", "note": "…", "sources": [], "relation": "informed-by" }
   ],
   "patterns": [   // detection patterns
     { "id": "si_active.ending_it", "category": "suicidal_ideation_active", "level": "crisis",
-      "pattern": "…", "flags": "i", "note": "…", "sources": ["srl-v1.0", "nimh-asq"], "relation": "informed-by" }
+      "pattern": "…", "flags": "i", "note": "…", "sources": ["srl-v1.0", "nimh-asq"], "relation": "informed-by" },
+    { "id": "si_active.vague_act_in_context", "category": "suicidal_ideation_active", "level": "crisis",
+      "pattern": "…", "flags": "i", "note": "…", "sources": ["srl-v1.0"], "relation": "informed-by",
+      "context": {  // context-gated: a match counts only with this context nearby
+        "scope": "adjacent",
+        "categories": ["suicidal_ideation_passive", "suicidal_ideation_active", "self_harm", "unsafe_with_self", "history"],
+        "rules": ["immediacy.plan", "immediacy.means", "immediacy.preparation", "immediacy.location"],
+        "pattern": "{{DROP}}|{{LETHAL}}|…", "flags": "i" } }
   ],
   "modifiers": [  // context cues
     { "id": "negated.not", "modifier": "negated", "scope": "forward", "maxGap": 50, "pattern": "…", … },
@@ -155,8 +252,9 @@ fragment as `{{ID}}`; the loader replaces each reference with
 listed before it. Fragments hold the shared frames and vocabulary slots: a
 first-person subject (`SELF`), bounded fillers (`FILL`, hedges, intensifiers,
 auxiliaries and negations), a clause start for subjectless texting (`START`),
-and slots such as `IDEATE`, `INTEND`, `CANT`, `PILLS`, `MEANS`, `BODY`,
-`SH_MARK` and `TIMING`. Another runtime that vendors the file must apply the
+imagery and urge frames (`IMAGINE`), and slots such as `IDEATE`, `INTEND`,
+`CANT`, `PILLS`, `MEANS`, `LETHAL`, `DROP` (high places and tracks), `BODY`,
+`SH_MARK`, `TIMING`, `PERMANENT` and `NUISANCE` (everyday annoyances). Another runtime that vendors the file must apply the
 same substitution (one regex replace).
 
 **Finding span.** When a capturing group takes part in a match, the first such
@@ -180,6 +278,35 @@ A cue with `"categories": [...]` acts only on findings of those categories
 (for example the literal-threat evidence that keeps a `threatened_by_other`
 finding from being read as an idiom).
 
+#### Context-gated patterns
+
+A detection pattern with a `context` object is context-gated. It is for vague
+or anaphoric wording that is crisis language only in context: "I've thought
+about it a lot and I'm going to finish it. I'm done being alive", but not
+"I'm going to finish it this weekend, the deck ships Monday". A gated match
+yields a finding only when, within `scope` (`sentence`: the same sentence;
+`adjacent`: the same sentence, the one before it, or the one after it), at
+least one of these is present and does not overlap the match itself:
+
+- a finding of an ungated detection pattern whose category is listed in
+  `categories`, or of an ungated detection or immediacy pattern whose id is
+  listed in `rules`, that is neither negated nor suppressed as an idiom
+  (past, quoted or third-party context still counts: "I tried to end my life
+  in 2019. This time I'm going to finish what I started"); or
+- a match of `pattern` (with `flags`; fragments allowed, no capturing
+  groups), for vocabulary that is not a finding of its own ("I keep thinking
+  about how I'd do it. The bridge, mostly").
+
+Context comes only from ungated patterns, so gates never depend on each other
+and the order of evaluation does not matter. Passing gated matches then
+compete with the ungated matches for overlaps as usual (the higher base level
+wins), and modifiers apply to them like any other finding. A gate never lowers
+anything: without its context, a gated match is simply not a finding, and an
+ungated pattern can cover the same wording at a lower level
+(`distress.vague_finality`). Another runtime implements a gate in a few lines:
+collect the ungated findings and their modifiers, then keep each gated match
+whose sentence window holds qualifying context.
+
 Every regex stays within a portable subset (no named groups, `\p{…}`, inline
 flags, atomic or possessive groups, variable-width lookbehind, `\Z`/`\z` or
 `$`), so ECMAScript (`u` flag) and Python `re` give the same matches, before
@@ -194,8 +321,8 @@ pnpm --filter @meddevkit/crisis-signals metrics        # SPEC §8 metrics on dat
 node packages/crisis-signals/scripts/metrics.mjs <file.jsonl>
 ```
 
-Published metrics: to be published after the held-out evaluation and clinical
-review.
+Published metrics: see [Measured limits](#measured-limits). Each release
+reports the dev set and every held-out set separately (SPEC §8).
 
 Design and evaluation plan:
 [SPEC.md](https://github.com/MedDevKit/meddevkit/blob/main/docs/specs/crisis-signals/SPEC.md).

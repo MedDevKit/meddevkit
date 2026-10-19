@@ -1,0 +1,71 @@
+{
+  "name": "@meddevkit/crisis-adapter-nope",
+  "version": "0.1.0",
+  "description": "Opt-in second opinion for @meddevkit/crisis-signals from a self-hosted nope-edge model on any OpenAI-compatible server (fetch-only; unreviewed; never the only safeguard)",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "crisis",
+    "suicide-prevention",
+    "safety",
+    "screening",
+    "nope-edge",
+    "ollama",
+    "vllm",
+    "llama.cpp",
+    "openai-compatible",
+    "meddevkit"
+  ],
+  "author": "Lyndon Hughey",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MedDevKit/meddevkit.git",
+    "directory": "packages/crisis-adapter-nope"
+  },
+  "homepage": "https://meddevkit.github.io/meddevkit/",
+  "bugs": {
+    "url": "https://github.com/meddevkit/meddevkit/issues"
+  },
+  "peerDependencies": {
+    "@meddevkit/crisis-signals": "^0.2.0"
+  },
+  "devDependencies": {
+    "@meddevkit/crisis-signals": "workspace:^",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.56.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

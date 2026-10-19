@@ -136,6 +136,11 @@ Modifier precedence: `idiom` > `third_party` > (`past` + `resolved`) >
   is plausible, keep `concern`, per recall first. Full risk-to-others
   handling is still v2 (D5).
 
+- **General questions vs named third parties** (round 3). "How do people
+  know if…" or "what are the warning signs" with no specific person is
+  `hypothetical` → `concern`. A named or specific other person ("my student
+  told me she…") is `third_party` → `none`.
+
 ## 5. API
 
 ### TypeScript
@@ -246,6 +251,12 @@ package README section on the pattern file is the normative description:
   with `sentence-or-next` scope blocks findings in the same or the next
   sentence.
 - `boundaries`: clause-boundary cues that limit scope.
+- Context-gated patterns (round 3): a pattern with `context: {scope:
+  sentence|adjacent, categories?, rules?, pattern?}` yields a finding only
+  when an ungated, non-negated, non-idiom finding of those categories or rules,
+  or a hit of the context regex, appears in the same sentence (or, for
+  `adjacent`, the previous or next one). Used for vague references ("finish
+  it") that are crisis only in context.
 
 Offsets are UTF-16 code units in TypeScript. The Python port must convert
 them, or document the difference.
@@ -293,19 +304,39 @@ Rules:
 
 ## 8. Evaluation and release gate
 
-Each release reports, on `vectors.jsonl` and separately on
-`vectors.heldout.jsonl`:
+Each release reports on `vectors.jsonl` (dev) and separately on every
+held-out set. `vectors.heldout.v2.jsonl` is the primary held-out set;
+`vectors.heldout.jsonl` (v1) is kept for history, though it has been scored
+repeatedly.
 
-| Metric | Definition | v1 release gate |
+| Metric | Definition | Release gate (revised 2026-10-18) |
 |---|---|---|
-| Crisis recall | Share of `crisis_positive` vectors returning `crisis` | 100% on dev; held-out reported with a 95% CI |
-| Any-flag recall | Share of crisis and concern positives returning anything other than `none` | 100% on dev and held-out |
+| Crisis recall | Share of `crisis_positive` vectors returning `crisis` | 100% on dev. Held-out **reported with a 95% CI in the README**, and must not regress |
+| Any-flag recall | Share of crisis and concern positives returning anything other than `none` | 100% on dev. Held-out reported with a CI; must not regress |
 | Grief false-alarm rate | Share of `grief_negative` vectors returning `crisis` | 0% on dev; held-out reported |
 | Idiom and everyday false-alarm rate | Share of `idiom_negative` / `everyday_negative` vectors returning anything other than `none` | ≤ 5% held-out |
 | Conformance | TypeScript and Python results identical on every vector | 100% |
 
+**Why the gate changed (D8, owner, 2026-10-18).**
+- **Findings:** after three rounds the patterns pass all dev vectors but catch
+  only about half of crisis statements in a held-out set written blind
+  (v2: 15/31).
+  - The misses are mostly oblique: preparation with no crisis words, imagery,
+    and wishes phrased by meaning rather than wording.
+  - Keyword-and-context rules plateau there, and further rounds mostly fit dev.
+- **Decision:** the original v1 gate of 100% held-out any-flag recall is not
+  achievable by patterns alone. The screen is therefore positioned as an
+  **explainable first-pass signal**:
+  - it is fast, offline and transparent;
+  - it publishes its measured recall honestly;
+  - it must never be the only safeguard.
+- **For higher recall**, consumers add the opt-in second-opinion adapter
+  (D6), which is now the next milestone.
+- **Measured limits:** the README states the held-out recall and its CI
+  prominently, next to the required wording in §9.
+
 Any change to a pattern must report the before and after numbers in the PR. A
-recall regression on dev blocks the merge.
+recall regression on dev or held-out blocks the merge.
 
 ## 9. Safety, claims and review
 
@@ -332,6 +363,7 @@ recall regression on dev blocks the merge.
 | M0 | This spec, the seed vectors, and a draft held-out set; decisions on §11 | Owner sign-off; vectors expanded to about 150 (at least 10 per group) |
 | M1 | TypeScript implementation, `patterns/crisis.patterns.json`, Vitest conformance suite | All dev vectors pass; MedDevKit's 80% coverage rule met |
 | M2 | Python port in convint, loading the same JSON; replaces the DISTRESS regexes in `src/convint/domain/signals.py`; convint's strict-xfail distress cases flip to passing | convint `make ci` green; conformance identical |
+| M2b | `CrisisSecondOpinion` interface in the core, and `@meddevkit/crisis-adapter-nope` (self-hosted nope-edge over an OpenAI-compatible endpoint), combined per research §3.2 | Adapter tests against a mock server; combined held-out recall reported with the adapter on, when a model is available |
 | M3 | Clinical review, the held-out report, and the README claims | `reviewed: true` on all vectors; metrics published in the README |
 
 ## 11. Decisions and open questions

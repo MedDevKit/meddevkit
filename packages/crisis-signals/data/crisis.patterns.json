@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "fragments": [
     {
       "id": "SELF",
@@ -161,6 +161,52 @@
       "note": "A person as a subject: a third-person pronoun, \"my <relation>\", or \"a guy from school\".",
       "sources": [],
       "relation": "informed-by"
+    },
+    {
+      "id": "PERMANENT",
+      "pattern": "permanently|forever|for\\s+good|for\\s+ever|for\\s+always|for\\s+real\\s+this\\s+time|(?:and\\s+)?never\\s+(?:to\\s+)?(?:come|coming)\\s+back|without\\s+a\\s+trace|no\\s+trace",
+      "note": "Permanence words that turn a soft wish (\"fade out\", \"go quiet\") into a wish not to exist.",
+      "sources": [],
+      "relation": "informed-by"
+    },
+    {
+      "id": "DROP",
+      "pattern": "bridges?|overpass(?:es)?|flyover|roofs?|rooftops?|ledges?|balcon(?:y|ies)|cliffs?|lookout|viewpoint|fire\\s+escape|parking\\s+(?:garage|structure|deck)|car\\s+park|(?:train\\s+|railway\\s+|subway\\s+)?tracks|railway|railroad|level\\s+crossing|pier|jetty|quay|dam|gorge|quarry|(?:\\w+(?:th|st|nd|rd)|top|highest)\\s+floor",
+      "note": "High places, tracks and drops: the places of method imagery and the context that makes a vague \"do it\" concrete. Plain \"window\", \"water\" and \"edge\" are left out because they are everyday words.",
+      "sources": [],
+      "relation": "informed-by"
+    },
+    {
+      "id": "LETHAL",
+      "pattern": "guns?|pistol|handgun|revolver|rifle|shotgun|firearms?|bullets?|ammo|rope|noose|razors?|razor\\s+blades?|blades?|poison|bleach|antifreeze|helium|charcoal\\s+grill|exhaust\\s+hose",
+      "note": "Lethal means that are rarely everyday props. Medication words are left out here (see PILLS and MEANS): \"I took my meds\" is not context for \"I am going to do it\".",
+      "sources": [
+        "srl-v1.0"
+      ],
+      "relation": "informed-by"
+    },
+    {
+      "id": "IMAGINE",
+      "pattern": "(?:{{IDEATE}})(?:\\s+(?:{{ABOUT}}))?|keep\\s+seeing|(?:the\\s+)?urges?\\s+to|(?:so\\s+)?tempted\\s+to|part\\s+of\\s+me\\s+(?:wants|wanted|keeps\\s+wanting)\\s+to|(?:want(?:s|ed)?|wanna)\\s+to|(?:brain|mind|head)\\s+(?:keeps|kept)\\s+(?:showing|giving|playing)\\s+me|(?:a|this|the)\\s+(?:picture|image|thought|vision|fantasy|idea)\\s+(?:in\\s+my\\s+head\\s+)?of|wonder(?:s|ing|ed)?\\s+(?:what|how)\\s+it\\s+would\\s+feel\\s+(?:like\\s+)?to",
+      "note": "Imagery and urge frames for method imagery: thinking about, imagining, picturing, the urge to, part of me wants to, my brain keeps showing me, the thought of.",
+      "sources": [
+        "srl-v1.0"
+      ],
+      "relation": "informed-by"
+    },
+    {
+      "id": "IMAGERY_FILL",
+      "pattern": "(?:\\s+(?:myself|me|just|actually|literally|simply|calmly|quietly|maybe|[a-z]+ing(?:\\s+(?:over|up|out|down|off|home|in|around))?\\s+and|how\\s+(?:easy|quick|simple|fast|easily|quickly|painless)\\s+it\\s+(?:would|could|might)\\s+be\\s+(?:to|if\\s+i\\s+(?:was|were|just)))){0,3}",
+      "note": "Bounded filler between an imagery frame and the act (\"thinking how easy it would be to step off\").",
+      "sources": [],
+      "relation": "informed-by"
+    },
+    {
+      "id": "NUISANCE",
+      "pattern": "traffic|commute|landlord|heating|heater|radiator|heat|heatwave|humidity|weather|printer|wi-?fi|internet|laptop|webinar|meetings?|zoom\\s+calls?|conference\\s+calls?|hold\\s+music|customer\\s+service|noise|construction|drilling|bark(?:ing|ed|s)|neighbou?rs['’]?\\s+(?:dog|party|music|renovation)|leaf\\s+blower|buffering|queue|delays?|layover|lag|this\\s+(?:game|level|boss|raid)|ranked",
+      "note": "Everyday nuisances (traffic, the heating, the printer, a webinar). \"I can't take it anymore\" or \"kill me\" about one of these is everyday frustration.",
+      "sources": [],
+      "relation": "informed-by"
     }
   ],
   "patterns": [
@@ -168,9 +214,9 @@
       "id": "si_passive.better_off_without_me",
       "category": "suicidal_ideation_passive",
       "level": "crisis",
-      "pattern": "\\b(?:better\\s+off|happier)\\s+without\\s+me\\b(?!\\s+(?:for\\s+(?:a|an|the|one|two|three|\\d+|few|couple|now|today|tonight)\\b|while\\b|during\\b|until\\b|till\\b|at\\s+(?:the|this|that)\\b|on\\s+(?:the|this|that|monday|tuesday|wednesday|thursday|friday|saturday|sunday|weekends?|vacation|holiday)\\b|tonight\\b|today\\b|tomorrow\\b|this\\s+(?:week|weekend|time|once|year)\\b|next\\s+\\w+|there\\b|in\\s+the\\s+(?:meeting|office|room|game|group|team|band|project)\\b))|\\b(?:would|will|['’]d|['’]ll|might|could|wud|wld)\\s+(?:(?:all|honestly|probably|just|really|totally|definitely|so|literally|actually|be\\s+so\\s+much|be\\s+much)\\s+)*be\\s+(?:(?:so\\s+much|much|a\\s+lot|way|far|so)\\s+)?(?:better(?:\\s+off)?|happier|fine|okay|ok|alright|all\\s+right|easier|lighter|freer|relieved|safer|less\\s+stressed)\\s+without\\s+me\\b(?!\\s+(?:for\\s+(?:a|an|the|one|two|three|\\d+|few|couple|now|today|tonight)\\b|while\\b|during\\b|until\\b|till\\b|at\\s+(?:the|this|that)\\b|on\\s+(?:the|this|that|monday|tuesday|wednesday|thursday|friday|saturday|sunday|weekends?|vacation|holiday)\\b|tonight\\b|today\\b|tomorrow\\b|this\\s+(?:week|weekend|time|once|year)\\b|next\\s+\\w+|there\\b|in\\s+the\\s+(?:meeting|office|room|game|group|team|band|project)\\b))|\\b(?:better\\s+off|happier|easier|better|lighter|relieved|fine|okay|freer)\\s+(?:for\\s+(?:everyone|everybody|them|all\\s+of\\s+us)\\s+)?if\\s+i\\s+(?:just\\s+|finally\\s+)?(?:(?:was|were)\\s+(?:gone|dead|not\\s+(?:here|around|alive|in\\s+the\\s+picture))|(?:was|were)n['’]?t\\s+(?:here|around|alive|in\\s+the\\s+picture|in\\s+(?:their|her|his|your)\\s+lives?|born)|died|disappeared|vanished|didn['’]?t\\s+exist|didnt\\s+exist|stopped\\s+existing|(?:was|were)\\s+never\\s+born|killed\\s+myself|ended\\s+(?:it|my\\s+life)|didn['’]?t\\s+wake\\s+up|never\\s+woke\\s+up)\\b|\\b(?:world|everyone|everybody|they|people)\\s+(?:would|will|['’]d)\\s+be\\s+(?:\\w+\\s+)?(?:better|lighter|happier)\\s+without\\s+me\\s+in\\s+it\\b|\\b(?:doing|do)\\s+(?:everyone|everybody|them|my\\s+(?:family|friends|kids|parents)|the\\s+world)\\s+a\\s+(?:favou?r|kindness)\\s+(?:if|by)\\s+(?:i\\s+{{GONE}}|(?:dying|disappearing|killing\\s+myself|not\\s+being\\s+(?:here|around)))\\b|\\b(?:a\\s+)?(?:relief|blessing|favou?r)\\s+(?:to|for)\\s+(?:everyone|everybody|them|my\\s+(?:family|friends|kids|parents))\\s+if\\s+i\\s+{{GONE}}\\b",
+      "pattern": "\\b(?:better\\s+off|happier)\\s+without\\s+me\\b(?!\\s+(?:for\\s+(?:a|an|the|one|two|three|\\d+|few|couple|now|today|tonight)\\b|while\\b|during\\b|until\\b|till\\b|at\\s+(?:the|this|that)\\b|on\\s+(?:the|this|that|monday|tuesday|wednesday|thursday|friday|saturday|sunday|weekends?|vacation|holiday)\\b|tonight\\b|today\\b|tomorrow\\b|this\\s+(?:week|weekend|time|once|year)\\b|next\\s+\\w+|there\\b|in\\s+the\\s+(?:meeting|office|room|game|group|team|band|project)\\b))|\\b(?:would|will|['’]d|['’]ll|might|could|wud|wld)\\s+(?:(?:all|honestly|probably|just|really|totally|definitely|so|literally|actually|be\\s+so\\s+much|be\\s+much)\\s+)*be\\s+(?:(?:so\\s+much|much|a\\s+lot|way|far|so)\\s+)?(?:better(?:\\s+off)?|happier|fine|okay|ok|alright|all\\s+right|easier|lighter|freer|relieved|safer|less\\s+stressed)\\s+without\\s+me\\b(?!\\s+(?:for\\s+(?:a|an|the|one|two|three|\\d+|few|couple|now|today|tonight)\\b|while\\b|during\\b|until\\b|till\\b|at\\s+(?:the|this|that)\\b|on\\s+(?:the|this|that|monday|tuesday|wednesday|thursday|friday|saturday|sunday|weekends?|vacation|holiday)\\b|tonight\\b|today\\b|tomorrow\\b|this\\s+(?:week|weekend|time|once|year)\\b|next\\s+\\w+|there\\b|in\\s+the\\s+(?:meeting|office|room|game|group|team|band|project)\\b))|\\b(?:better\\s+off|happier|easier|better|lighter|relieved|fine|okay|freer|simpler|calmer|quieter|cheaper|less\\s+complicated|more\\s+peaceful)\\s+(?:for\\s+(?:everyone|everybody|them|all\\s+of\\s+us|my\\s+\\w+|people|her|him)\\s+)?if\\s+i\\s+(?:just\\s+|finally\\s+)?(?:(?:was|were)\\s+(?:gone|dead|not\\s+(?:here|around|alive|in\\s+the\\s+picture))|(?:was|were)n['’]?t\\s+(?:here|around|alive|in\\s+the\\s+picture|in\\s+(?:their|her|his|your)\\s+lives?|born)|died|disappeared|vanished|didn['’]?t\\s+exist|didnt\\s+exist|stopped\\s+existing|(?:was|were)\\s+never\\s+born|killed\\s+myself|ended\\s+(?:it|my\\s+life)|didn['’]?t\\s+wake\\s+up|never\\s+woke\\s+up)\\b|\\b(?:world|everyone|everybody|they|people)\\s+(?:would|will|['’]d)\\s+be\\s+(?:\\w+\\s+)?(?:better|lighter|happier)\\s+without\\s+me\\s+in\\s+it\\b|\\b(?:doing|do)\\s+(?:everyone|everybody|them|my\\s+(?:family|friends|kids|parents)|the\\s+world)\\s+a\\s+(?:favou?r|kindness)\\s+(?:if|by)\\s+(?:i\\s+{{GONE}}|(?:dying|disappearing|killing\\s+myself|not\\s+being\\s+(?:here|around)))\\b|\\b(?:a\\s+)?(?:relief|blessing|favou?r)\\s+(?:to|for)\\s+(?:everyone|everybody|them|my\\s+(?:family|friends|kids|parents))\\s+if\\s+i\\s+{{GONE}}\\b|\\b(?:better(?:\\s+off)?|easier|simpler|happier|fine|calmer|quieter|lighter|run\\s+(?:better|smoother))\\s+with\\s+me\\s+(?:gone|dead|out\\s+of\\s+the\\s+picture|out\\s+of\\s+(?:their|the)\\s+(?:way|lives?)|not\\s+(?:here|around))\\b(?!\\s+(?:for\\s+(?:a|an|the|this|one|two|three|\\d+|few|couple|now|tonight|today)|this\\s+(?:week|weekend)|tonight|today|tomorrow|until|till|while|during|on)\\b)|\\b(?:{{IMAGINE}})\\s+(?:(?:what|how)\\s+)?(?:the\\s+world|everyone|everybody|(?:my|their|everyone['’]?s|our)\\s+(?:family|lives|life|kids|children|friends|world))\\s+(?:would\\s+(?:be|look)\\s+(?:like\\s+)?)?without\\s+me(?:\\s+in\\s+it)?\\b",
       "flags": "i",
-      "note": "Burden frames: \"better off without me\", \"would be fine/lighter/relieved without me\", \"relieved if I wasn't in the picture\". \"Fine without me\" needs a modal (\"would be fine\"), and a temporary absence (\"for a week\", \"while I'm away\") does not match.",
+      "note": "Burden statements: others better off, simpler or fine without me, or with me gone; picturing the world without me. Trips and time-limited absences (\"for a week\", \"this weekend\") are excluded.",
       "sources": [
         "srl-v1.0",
         "nimh-asq"
@@ -207,9 +253,9 @@
       "id": "si_passive.wish_could_die",
       "category": "suicidal_ideation_passive",
       "level": "crisis",
-      "pattern": "\\b(?:wish(?:ed|es|ing)?|hop(?:e|es|ed|ing)|pray(?:s|ed|ing)?|long(?:ing)?\\s+for|dream(?:ing)?\\s+(?:of|about))\\s+(?:that\\s+)?(?:i(?:['’]d|\\s+(?:could|would|might|can|will))?\\s+|(?:could|would|might|can)\\s+)?(?:(?:just|finally|simply|quietly|peacefully|already|someday|one\\s+day)\\s+)*(?:die(?:\\s+in\\s+my\\s+sleep)?|stop\\s+existing|cease\\s+to\\s+(?:exist|be)|not\\s+exist|fall\\s+asleep\\s+(?:forever|and\\s+(?:not|never)\\s+wake\\s+up)|sleep\\s+forever|go\\s+to\\s+sleep\\s+forever|fade\\s+away|be\\s+erased|never\\s+have\\s+been\\s+born|get\\s+hit\\s+by\\s+a\\s+(?:car|bus|truck|train)|get\\s+(?:into|in)\\s+a\\s+(?:fatal\\s+|bad\\s+|car\\s+)?(?:accident|crash|wreck)(?:\\s+and\\s+die)?|drop\\s+dead|get\\s+cancer|(?:disappear|vanish)(?:\\s+(?:forever|for\\s+good|permanently|completely|and\\s+never\\s+come\\s+back))?\\b(?!\\s+(?:into|to|for|from|on|under|in|off|with|somewhere|until|till|after|before|over|across|abroad|away|again|tonight|today|this|back|behind|inside|when)\\b))\\b",
+      "pattern": "\\b(?:wish(?:ed|es|ing)?|hop(?:e|es|ed|ing)|pray(?:s|ed|ing)?|long(?:ing)?\\s+for|dream(?:ing)?\\s+(?:of|about))\\s+(?:that\\s+)?(?:i(?:['’]d|\\s+(?:could|would|might|can|will))?\\s+|(?:could|would|might|can)\\s+)?(?:(?:just|finally|simply|quietly|peacefully|already|someday|one\\s+day)\\s+)*(?:die(?:\\s+in\\s+my\\s+sleep)?|stop\\s+existing|cease\\s+to\\s+(?:exist|be)|not\\s+exist|fall\\s+asleep\\s+(?:forever|and\\s+(?:not|never)\\s+wake\\s+up)|sleep\\s+forever|go\\s+to\\s+sleep\\s+forever|fade\\s+away|be\\s+erased|stay\\s+asleep\\s+(?:{{PERMANENT}})|(?:dissolve|evaporate|melt|fade)(?:\\s+(?:into|in)\\s+(?:it|the\\s+\\w+|nothing(?:ness)?|thin\\s+air))?\\s+(?:and\\s+(?:just\\s+)?(?:be\\s+gone|disappear|vanish|never\\s+come\\s+back|not\\s+exist|stop\\s+existing)|(?:{{PERMANENT}}))|never\\s+have\\s+been\\s+born|get\\s+hit\\s+by\\s+a\\s+(?:car|bus|truck|train)|get\\s+(?:into|in)\\s+a\\s+(?:fatal\\s+|bad\\s+|car\\s+)?(?:accident|crash|wreck)(?:\\s+and\\s+die)?|drop\\s+dead|get\\s+cancer|(?:disappear|vanish)(?:\\s+(?:forever|for\\s+good|permanently|completely|and\\s+never\\s+come\\s+back))?\\b(?!\\s+(?:into|to|for|from|on|under|in|off|with|somewhere|until|till|after|before|over|across|abroad|away|again|tonight|today|this|back|behind|inside|when)\\b))\\b",
       "flags": "i",
-      "note": "Wish, hope or prayer to die, not exist, sleep forever or vanish. A travel or time phrase after \"disappear\" (\"disappear into the mountains for a week\") does not match.",
+      "note": "Wishing or hoping to die, stop existing, stay asleep for good, dissolve and be gone, or disappear for good (not into a room or for a trip).",
       "sources": [
         "srl-v1.0",
         "nimh-asq"
@@ -220,20 +266,21 @@
       "id": "si_passive.hope_i_die",
       "category": "suicidal_ideation_passive",
       "level": "crisis",
-      "pattern": "\\b(?:hope|hoping|pray|praying)\\s+(?:that\\s+)?i\\s+(?:just\\s+)?(?:die|get\\s+hit\\s+by\\s+a\\s+(?:car|bus|truck|train)|don['’]?t\\s+make\\s+it(?:\\s+through\\s+the\\s+night)?)\\b",
+      "pattern": "\\b(?:hope|hoping|pray|praying)\\s+(?:that\\s+)?i\\s+(?:just\\s+)?(?:die|get\\s+hit\\s+by\\s+a\\s+(?:car|bus|truck|train)|don['’]?t\\s+make\\s+it(?:\\s+through\\s+the\\s+night)?)\\b|\\bhop(?:e|es|ing)\\s+(?:that\\s+)?i\\s+(?:get|catch|come\\s+down\\s+with)\\s+(?:really\\s+)?(?:sick|ill|something|cancer|covid|the\\s+flu)\\s+and\\s+(?:just\\s+)?(?:don['’]?t|dont|do\\s+not|never|won['’]?t)\\s+(?:recover|get\\s+better|make\\s+it|pull\\s+through|wake\\s+up)\\b|\\bhop(?:e|es|ing)\\s+(?:that\\s+)?(?:it|the\\s+(?:cancer|illness|disease|tumou?r|virus))\\s+(?:comes\\s+back\\s+and\\s+)?(?:takes|gets)\\s+me\\b|\\b(?:plane|planes|flight|flights|flying|fly|airplane|aeroplane)\\b[^.!?\\n]{0,60}?\\b((?:secretly\\s+)?hop(?:e|es|ing)\\s+(?:that\\s+)?(?:it|we|the\\s+plane)\\s+(?:(?:just|actually|finally)\\s+)?(?:goes\\s+down|go\\s+down|crashes|crash|falls\\s+out\\s+of\\s+the\\s+sky))\\b|\\bhop(?:e|es|ing)\\s+(?:that\\s+)?my\\s+heart\\s+(?:just\\s+)?(?:stops|gives\\s+out|gives\\s+up|gives\\s+in)\\b",
       "flags": "i",
       "sources": [
         "srl-v1.0"
       ],
-      "relation": "informed-by"
+      "relation": "informed-by",
+      "note": "Hoping to die or not to survive: an illness I do not recover from, the cancer taking me, the plane going down. A plane alternative needs the plane in the same sentence, and the span is the hope."
     },
     {
       "id": "si_passive.want_to_not_exist",
       "category": "suicidal_ideation_passive",
       "level": "crisis",
-      "pattern": "\\b(?:want(?:s|ed|ing)?|wanna|need(?:s|ed)?|['’]d\\s+(?:like|love)|would\\s+(?:like|love))\\s+(?:to\\s+)?(?:(?:just|finally|simply|quietly|really|honestly|literally)\\s+)*(?:stop\\s+existing|cease\\s+to\\s+(?:exist|be)|not\\s+exist|(?:not|never)\\s+(?:be\\s+(?:alive|here\\s+anymore|around\\s+anymore|anything|at\\s+all)|have\\s+to\\s+(?:wake\\s+up|exist|be\\s+alive))|be\\s+(?:dead|nothing|no\\s+more)|be\\s+gone\\s+(?:forever|for\\s+good|permanently)|stop\\s+being\\s+(?:alive|here|around|a\\s+person)|fade\\s+away|go\\s+to\\s+sleep\\s+forever|sleep\\s+forever|(?:disappear|vanish)(?:\\s+(?:forever|for\\s+good|permanently|completely|and\\s+never\\s+come\\s+back))?\\b(?!\\s+(?:into|to|for|from|on|under|in|off|with|somewhere|until|till|after|before|over|across|abroad|away|again|tonight|today|this|back|behind|inside|when)\\b))\\b",
+      "pattern": "\\b(?:want(?:s|ed|ing)?|wanna|need(?:s|ed)?|['’]d\\s+(?:like|love)|id\\s+(?:like|love)|would\\s+(?:like|love)|(?:['’]d|id|would)\\s+give\\s+anything)\\s+(?:to\\s+)?(?:(?:just|finally|simply|quietly|really|honestly|literally)\\s+)*(?:stop\\s+existing|cease\\s+to\\s+(?:exist|be)|not\\s+exist|(?:not|never)\\s+(?:be\\s+(?:alive|here\\s+anymore|around\\s+anymore|anything|at\\s+all)|have\\s+to\\s+(?:wake\\s+up|exist|be\\s+alive))|be\\s+(?:dead|nothing|no\\s+more)|be\\s+gone\\s+(?:forever|for\\s+good|permanently)|stop\\s+being\\s+(?:alive|here|around|a\\s+person)|stop\\s+waking\\s+up|be\\s+erased(?!\\s+from\\s+(?:the|this|that|my)\\s+(?:list|group|chat|photo|picture|record|database|system)\\b)|fade\\s+away|go\\s+to\\s+sleep\\s+forever|sleep\\s+forever|(?:disappear|vanish)(?:\\s+(?:forever|for\\s+good|permanently|completely|and\\s+never\\s+come\\s+back))?\\b(?!\\s+(?:into|to|for|from|on|under|in|off|with|somewhere|until|till|after|before|over|across|abroad|away|again|tonight|today|this|back|behind|inside|when)\\b))\\b",
       "flags": "i",
-      "note": "Wanting to stop existing, cease to be, be nothing, or disappear (not for a trip or a while).",
+      "note": "Wanting (or \"giving anything\") to stop existing, cease to be, be erased, stop waking up, be nothing, or disappear (not for a trip or a while).",
       "sources": [
         "srl-v1.0"
       ],
@@ -279,20 +326,21 @@
       "id": "si_passive.never_born",
       "category": "suicidal_ideation_passive",
       "level": "crisis",
-      "pattern": "\\bwish(?:ed|es|ing)?\\s+(?:that\\s+)?i\\s*(?:['’]d|\\s+had|\\s+was|\\s+were)\\s+never\\s+(?:been\\s+)?born\\b",
+      "pattern": "\\bwish(?:ed|es|ing)?\\s+(?:that\\s+)?i\\s*(?:['’]d|\\s+had|\\s+was|\\s+were)\\s+never\\s+(?:(?:been\\s+)?born|existed|exist)\\b",
       "flags": "i",
       "sources": [
         "srl-v1.0"
       ],
-      "relation": "informed-by"
+      "relation": "informed-by",
+      "note": "Wishing never to have been born or never to have existed."
     },
     {
       "id": "si_passive.not_wake_up",
       "category": "suicidal_ideation_passive",
       "level": "crisis",
-      "pattern": "\\b(?:wish|wishing|hope|hoping|want|wanna|wanted|pray|praying)\\b[^.!?\\n]{0,40}\\b(?:not|never|didn['’]?t|don['’]?t|wouldn['’]?t|won['’]?t)\\s+(?:ever\\s+)?wake\\s+up\\b(?!\\s+(?:the|my|your|his|her|our|their|him|them|everyone|anyone|early|late|on\\s+time|in\\s+time)\\b)|\\bwhat\\s+if\\s+i\\s+(?:just\\s+)?(?:didn['’]?t|don['’]?t|never|did\\s+not|do\\s+not)\\s+wake\\s+up\\b|\\b(?:go\\s+to\\s+sleep|fall\\s+asleep|sleep)\\s+(?:and\\s+)?(?:not|never)\\s+wake\\s+up\\b|\\b(?:want|wanna|wish|ready)\\s+(?:to\\s+)?(?:just\\s+)?(?:go\\s+to\\s+sleep|fall\\s+asleep|sleep)\\s+forever\\b|\\bgo\\s+to\\s+sleep\\s+forever\\b",
+      "pattern": "\\b(?:wish|wishing|hope|hoping|want|wanna|wanted|pray|praying)\\b[^.!?\\n]{0,40}\\b(?:not|never|didn['’]?t|don['’]?t|wouldn['’]?t|won['’]?t)\\s+(?:ever\\s+)?wake\\s+up\\b(?!\\s+(?:the|my|your|his|her|our|their|him|them|everyone|anyone|early|late|on\\s+time|in\\s+time)\\b)|\\bwhat\\s+if\\s+i\\s+(?:just\\s+)?(?:didn['’]?t|don['’]?t|never|did\\s+not|do\\s+not)\\s+wake\\s+up\\b|\\b(?:go\\s+to\\s+sleep|fall\\s+asleep|sleep)\\s+(?:and\\s+)?(?:not|never)\\s+wake\\s+up\\b|\\b(?:want|wanna|wish|ready)\\s+(?:to\\s+)?(?:just\\s+)?(?:go\\s+to\\s+sleep|fall\\s+asleep|sleep)\\s+forever\\b|\\bgo\\s+to\\s+sleep\\s+forever\\b|\\b(?:go\\s+to\\s+(?:sleep|bed)|fall\\s+asleep|close\\s+my\\s+eyes|lie\\s+down|sleep)\\s+and\\s+(?:(?:just|simply)\\s+)?(?:never|not)\\s+(?:wake|get)\\s+(?:back\\s+)?up\\b(?!\\s+(?:until|till|til|before|early|for|on|at|in\\s+the\\s+morning)\\b)|\\b(?:fall\\s+asleep|go\\s+to\\s+sleep|close\\s+my\\s+eyes|sleep)\\s+and\\s+(?:just\\s+)?(?:stay\\s+(?:that\\s+way|asleep|there)|never\\s+open\\s+them\\s+again)\\b|\\bstay\\s+asleep\\s+(?:{{PERMANENT}})\\b",
       "flags": "i",
-      "note": "Not-waking-up wishes. Requires a wish/hope frame, \"what if I didn't\", or a sleep frame, so \"I didn't wake up on time\" does not match.",
+      "note": "Not waking up: wishing not to wake up, going to sleep or to bed and never waking or getting up, falling asleep and staying that way.",
       "sources": [
         "srl-v1.0",
         "nimh-asq"
@@ -329,12 +377,13 @@
       "id": "si_passive.tired_of_living",
       "category": "suicidal_ideation_passive",
       "level": "crisis",
-      "pattern": "\\b(?:tired|sick|exhausted)\\s+of\\s+(?:being\\s+alive\\b|existing\\b|life\\b(?!\\s+(?:in|on|at|with|as)\\b)|living\\b(?=\\s*[.!?,;]|\\s*(?![\\s\\S])|\\s+(?:anymore|any\\s*more|and|but|like\\s+this|this\\s+way)\\b)|waking\\s+up(?:\\s+every\\s+(?:day|morning))?\\b(?=\\s*[.!?,;]|\\s*(?![\\s\\S])|\\s+(?:anymore|and|but)\\b))",
+      "pattern": "\\b(?:tired|sick|exhausted)\\s+of\\s+(?:being\\s+alive\\b|existing\\b|life\\b(?!\\s+(?:in|on|at|with|as)\\b)|living\\b(?=\\s*[.!?,;]|\\s*(?![\\s\\S])|\\s+(?:anymore|any\\s*more|and|but|like\\s+this|this\\s+way)\\b)|waking\\s+up(?:\\s+every\\s+(?:day|morning))?\\b(?=\\s*[.!?,;]|\\s*(?![\\s\\S])|\\s+(?:anymore|and|but)\\b))|\\b(?:i['’]?m|im|i\\s+am)\\s+(?:(?:so|just|completely|honestly|really|totally|officially)\\s+)*done\\s+(?:being\\s+alive|existing|living)\\b(?!\\s+(?:in|with|at|on|like|here|there|out)\\b)",
       "flags": "i",
       "sources": [
         "srl-v1.0"
       ],
-      "relation": "informed-by"
+      "relation": "informed-by",
+      "note": "Tired or sick of living or existing; done being alive."
     },
     {
       "id": "si_passive.suicidal",
@@ -412,12 +461,13 @@
       "id": "si_passive.wont_be_around",
       "category": "suicidal_ideation_passive",
       "level": "crisis",
-      "pattern": "\\b(?:won['’]?t|will\\s+not|not\\s+going\\s+to)\\s+be\\s+(?:(?:here|around)\\s+much\\s+longer|alive\\s+(?:much\\s+longer|for\\s+long|anymore|by\\s+(?:then|next\\s+\\w+)))\\b",
+      "pattern": "\\b(?:won['’]?t|will\\s+not|not\\s+going\\s+to)\\s+be\\s+(?:(?:here|around)\\s+much\\s+longer|alive\\s+(?:much\\s+longer|for\\s+long|anymore|by\\s+(?:then|next\\s+\\w+)))\\b|\\b(?:won['’]?t|will\\s+not|not\\s+going\\s+to|not\\s+gonna)\\s+be\\s+(?:a\\s+)?(?:problem|burden|bother|weight|nuisance|drain|trouble|pain)\\s+(?:to|for|on)\\s+(?:anyone|anybody|you|them|everyone|everybody|my\\s+\\w+|people)\\s+(?:(?:for\\s+)?(?:much|any)\\s+longer|for\\s+long|after\\s+(?:tonight|today|tomorrow|this\\s+\\w+))\\b",
       "flags": "i",
       "sources": [
         "srl-v1.0"
       ],
-      "relation": "informed-by"
+      "relation": "informed-by",
+      "note": "Not being around, alive or a burden to anyone much longer."
     },
     {
       "id": "si_passive.death_would_be_relief",
@@ -435,7 +485,7 @@
       "id": "si_passive.wouldnt_mind_dying",
       "category": "suicidal_ideation_passive",
       "level": "crisis",
-      "pattern": "\\b(?:wouldn['’]?t|wouldnt|would\\s+not|won['’]?t|wont|don['’]?t|dont|do\\s+not)\\s+(?:(?:even|really|honestly|actually|exactly|totally)\\s+)?(?:mind|care|be\\s+(?:sad|upset|sorry|bothered|scared))\\s+(?:(?:at\\s+all\\s+)?if\\s+i\\s+(?:just\\s+)?(?:died|didn['’]?t\\s+wake\\s+up|never\\s+woke\\s+up|got\\s+hit\\s+by\\s+(?:a\\s+)?(?:car|bus|truck|train)|(?:was|were)\\s+(?:gone|dead)|disappeared|stopped\\s+existing|passed\\s+away|didn['’]?t\\s+make\\s+it)|dying|being\\s+dead|not\\s+waking\\s+up|never\\s+waking\\s+up)\\b|\\b(?:it\\s+)?(?:wouldn['’]?t|would\\s+not)\\s+be\\s+(?:so\\s+bad|that\\s+bad|bad|the\\s+worst\\s+thing|a\\s+bad\\s+thing)\\s+if\\s+i\\s+(?:just\\s+)?(?:died|didn['’]?t\\s+wake\\s+up|never\\s+woke\\s+up)\\b",
+      "pattern": "\\b(?:wouldn['’]?t|wouldnt|would\\s+not|won['’]?t|wont|don['’]?t|dont|do\\s+not)\\s+(?:(?:even|really|honestly|actually|exactly|totally)\\s+)?(?:mind|care|be\\s+(?:sad|upset|sorry|bothered|scared))\\s+(?:(?:at\\s+all\\s+)?if\\s+i\\s+(?:just\\s+)?(?:died|didn['’]?t\\s+wake\\s+up|never\\s+woke\\s+up|got\\s+hit\\s+by\\s+(?:a\\s+)?(?:car|bus|truck|train)|(?:was|were)\\s+(?:gone|dead)|disappeared|stopped\\s+existing|passed\\s+away|didn['’]?t\\s+make\\s+it)|dying|being\\s+dead|not\\s+waking\\s+up|never\\s+waking\\s+up)\\b|\\b(?:it\\s+)?(?:wouldn['’]?t|would\\s+not)\\s+be\\s+(?:so\\s+bad|that\\s+bad|bad|the\\s+worst\\s+thing|a\\s+bad\\s+thing)\\s+if\\s+i\\s+(?:just\\s+)?(?:died|didn['’]?t\\s+wake\\s+up|never\\s+woke\\s+up)\\b|\\b(?:i['’]?d|i\\s+would)\\s+(?:(?:honestly|really|actually|totally|genuinely)\\s+)?be\\s+(?:okay|ok|fine|alright|all\\s+right|glad|relieved|happy|at\\s+peace)\\s+(?:with\\s+it\\s+)?if\\s+(?:i\\s+(?:just\\s+)?(?:died|didn['’]?t\\s+wake\\s+up|never\\s+woke\\s+up|got\\s+hit\\s+by\\s+(?:a\\s+)?(?:car|bus|truck|train)|didn['’]?t\\s+make\\s+it)|(?:a|the)\\s+(?:bus|car|truck|train)\\s+(?:hit\\s+me|ran\\s+me\\s+over|ran\\s+over\\s+me))\\b",
       "flags": "i",
       "note": "Indifference to dying (\"I wouldn't mind if I died in my sleep\"). The negation word is part of the phrase, so it is not read as a denial.",
       "sources": [
@@ -492,12 +542,70 @@
       "relation": "informed-by"
     },
     {
+      "id": "si_passive.erase_myself",
+      "category": "suicidal_ideation_passive",
+      "level": "crisis",
+      "pattern": "\\b(?:press|push|hit)(?:ed|es|ing)?\\s+a\\s+button\\s+(?:and|to)\\s+(?:just\\s+)?(?:be\\s+erased|disappear|vanish|not\\s+exist|stop\\s+existing|never\\s+have\\s+(?:existed|been\\s+born)|cease\\s+to\\s+exist|be\\s+gone|un-?exist|delete\\s+myself|erase\\s+myself)\\b|\\b(?:erase|delete|wipe)\\s+myself\\s+(?:from\\s+(?:existence|the\\s+world|everything|the\\s+planet|history|everyone['’]?s\\s+(?:life|lives|memory))|completely|permanently|forever|for\\s+good)\\b|\\b(?:disappearing|vanishing|fading\\s+(?:away|out)|not\\s+existing|ceasing\\s+to\\s+exist)\\s+(?:{{PERMANENT}})\\b",
+      "flags": "i",
+      "note": "Self-erasure: pressing a button to be erased or never have existed, deleting myself from existence, and the noun phrase \"disappearing for good\" (so a later denial, \"is not what I'm after\", can scope over it).",
+      "sources": [
+        "srl-v1.0"
+      ],
+      "relation": "informed-by"
+    },
+    {
+      "id": "si_passive.fade_in_context",
+      "category": "suicidal_ideation_passive",
+      "level": "crisis",
+      "pattern": "\\b(?:feel(?:s|ing)?\\s+like|want(?:s|ed)?\\s+to|wanna|wish\\s+i\\s+could|['’]d\\s+love\\s+to|id\\s+love\\s+to|need\\s+to)\\s+(?:just\\s+|kind\\s+of\\s+|kinda\\s+)?((?:fad(?:e|ing)\\s+(?:out|away)|go(?:ing)?\\s+(?:quiet|dark|silent|still|numb)|(?:switch(?:ing)?|turn(?:ing)?)\\s+(?:myself\\s+|me\\s+|it\\s+all\\s+|everything\\s+)?off|shut(?:ting)?\\s+(?:myself\\s+)?(?:off|down)|sleep(?:ing)?|stop(?:ping)?))(?=\\s*[.!?,;]|\\s*(?![\\s\\S])|\\s+(?:and\\b|forever|for\\s+good|permanently))|\\bwant\\s+(?:everything|it\\s+all|all\\s+of\\s+it|the\\s+world|my\\s+(?:head|brain|mind))\\s+to\\s+((?:just\\s+)?(?:go\\s+(?:quiet|dark|silent|still)|shut\\s+(?:off|up)|fade(?:\\s+out)?))(?=\\s*[.!?,;]|\\s*(?![\\s\\S])|\\s+(?:and\\b|forever|for\\s+good|permanently))",
+      "flags": "i",
+      "note": "A soft wish to fade out, go quiet, switch off or sleep. On its own it is often about rest; with a permanence word in the same, previous or next sentence (\"not like a vacation, like permanently\") it is a wish not to exist.",
+      "sources": [
+        "srl-v1.0"
+      ],
+      "relation": "informed-by",
+      "context": {
+        "scope": "adjacent",
+        "pattern": "{{PERMANENT}}",
+        "flags": "i"
+      }
+    },
+    {
+      "id": "si_passive.gone_in_context",
+      "category": "suicidal_ideation_passive",
+      "level": "crisis",
+      "pattern": "\\b((?:after|when|once)\\s+i['’]?m\\s+(?:gone|dead|not\\s+(?:here|around)(?:\\s+anymore)?)|(?:after|when|once)\\s+i\\s+am\\s+(?:gone|dead)|after\\s+i\\s+(?:die|pass))\\b",
+      "flags": "i",
+      "note": "\"After I'm gone\": estate-planning wording on its own, so it counts only next to crisis language, means or preparation (\"made sure the bills are paid and the passwords are written down for my wife so she's not stuck after I'm gone\").",
+      "sources": [
+        "nimh-warning-signs"
+      ],
+      "relation": "informed-by",
+      "context": {
+        "scope": "adjacent",
+        "categories": [
+          "suicidal_ideation_passive",
+          "suicidal_ideation_active",
+          "self_harm",
+          "unsafe_with_self"
+        ],
+        "rules": [
+          "immediacy.plan",
+          "immediacy.means",
+          "immediacy.preparation",
+          "immediacy.location"
+        ],
+        "pattern": "{{DROP}}|{{LETHAL}}",
+        "flags": "i"
+      }
+    },
+    {
       "id": "si_active.kill_myself",
       "category": "suicidal_ideation_active",
       "level": "crisis",
-      "pattern": "\\b(?:kill|kil|unaliv(?:e|es|ed|ing)|un-aliv(?:e|ing)|off(?:s|ed|ing)|top(?:s|ped|ping)|neck(?:s|ed|ing))(?:s|ed|{{ING}})?\\s+(?:my|him|her|them|your|our)\\s*(?:sel(?:f|ves)|slef)\\b|(?<!\\d\\s)\\bkms\\b|\\bunalive\\b|\\bself[\\s-]?delet(?:e|ing|ion)\\b|\\b(?:to|gonna|wanna|just|i|i['’]ll|might|should|could|would|will|or|and|consider|considering|about\\s+to|tryna)\\s+off\\s+(?:{{MYSELF}})\\b|\\bdo\\s+myself\\s+in\\b|\\bend\\s+myself\\b|\\bhow\\s+to\\s+(?:tie\\s+a\\s+noose|make\\s+a\\s+noose|hang\\s+myself|kill\\s+myself|overdose\\s+on|slit\\s+(?:my\\s+)?(?:wrists?|throat)|end\\s+my\\s+(?:own\\s+)?life|die\\s+(?:painlessly|quickly|peacefully|without\\s+pain|in\\s+my\\s+sleep))\\b",
+      "pattern": "\\b(?:kill|kil|unaliv(?:e|es|ed|ing)|un-aliv(?:e|ing)|off(?:s|ed|ing)|top(?:s|ped|ping)|neck(?:s|ed|ing))(?:s|ed|{{ING}})?\\s+(?:my|him|her|them|your|our)\\s*(?:sel(?:f|ves)|slef)\\b|(?<!\\d\\s)\\bkms\\b|\\bunalive\\b|\\bself[\\s-]?delet(?:e|ing|ion)\\b|\\b(?:to|gonna|wanna|just|i|i['’]ll|might|should|could|would|will|or|and|consider|considering|about\\s+to|tryna)\\s+off\\s+(?:{{MYSELF}})\\b|\\bdo\\s+myself\\s+in\\b|\\bend\\s+myself\\b|\\bhow\\s+to\\s+(?:tie\\s+a\\s+noose|make\\s+a\\s+noose|hang\\s+myself|kill\\s+myself|overdose\\s+on|slit\\s+(?:my\\s+)?(?:wrists?|throat)|end\\s+my\\s+(?:own\\s+)?life|die\\s+(?:painlessly|quickly|peacefully|without\\s+pain|in\\s+my\\s+sleep))\\b|\\b(?:take|taking|took|takes)\\s+myself\\s+out\\s+of\\s+(?:the\\s+picture|the\\s+equation|this\\s+world|existence)\\b|\\bremov(?:e|es|ing|ed)\\s+myself\\s+(?:from\\s+(?:the\\s+picture|the\\s+equation|this\\s+world|existence|everyone['’]?s\\s+lives?)|permanently)\\b",
       "flags": "i",
-      "note": "Killing oneself, with typos (\"killin myself\", \"kill my self\"), slang (\"kms\", \"unalive\", \"offing myself\", \"top myself\", \"self-delete\") and other reflexives, so third-party and question uses are kept as findings for the third_party and hypothetical cues.",
+      "note": "Killing oneself, with typos (\"killin myself\", \"kill my self\"), slang (\"kms\", \"unalive\", \"offing myself\", \"top myself\", \"self-delete\"), euphemisms (\"taking myself out of the picture\") and other reflexives, so third-party and question uses are kept as findings for the third_party and hypothetical cues.",
       "sources": [
         "srl-v1.0",
         "nimh-asq"
@@ -531,9 +639,9 @@
       "id": "si_active.ending_it",
       "category": "suicidal_ideation_active",
       "level": "crisis",
-      "pattern": "\\b(?:{{IDEATE}})\\s+(?:(?:{{ABOUT}})\\s+)?(?:just\\s+)?end(?:ing)?\\s+(?:it(?:\\s+all)?|things|everything|my\\s+(?:own\\s+)?life)\\b(?!\\s+(?:with|between)\\b)|\\b(?:(?:want(?:s|ed)?|going|ready|decided|about|need|needs|planning|plan|plans|try|trying|tried)\\s+to|wanna|gonna|so\\s+(?:that\\s+)?i\\s+(?:can|could))\\s+(?:just\\s+)?end\\s+(?:it(?:\\s+all)?|everything|things)\\b(?!\\s+(?:with|there|here|on|at|early|before|after|between|off|for(?!\\s+(?:good|real)\\b))\\b)|{{SELF}}{{FILL}}\\s+(end\\s+(?:it\\s+all|everything)\\b)(?!\\s+(?:with|on|at|in|for|i|we|that|this)\\b)",
+      "pattern": "\\b(?:{{IDEATE}})\\s+(?:(?:{{ABOUT}})\\s+)?(?:just\\s+)?end(?:ing)?\\s+(?:it(?:\\s+all)?|things|everything|my\\s+(?:own\\s+)?life)\\b(?!\\s+(?:with|between)\\b)|\\b(?:(?:want(?:s|ed)?|going|ready|decided|about|need|needs|planning|plan|plans|try|trying|tried)\\s+to|wanna|gonna|so\\s+(?:that\\s+)?i\\s+(?:can|could))\\s+(?:just\\s+)?end\\s+(?:it(?:\\s+all)?|everything|things)\\b(?!\\s+(?:with|there|here|on|at|early|before|after|between|off|for(?!\\s+(?:good|real)\\b))\\b)|{{SELF}}{{FILL}}\\s+(end\\s+(?:it\\s+all|everything)\\b)(?!\\s+(?:with|on|at|in|for|i|we|that|this)\\b)|{{SELF}}{{FILL}}\\s+(let\\s+go(?:\\s+of\\s+(?:everything|it\\s+all|life|this\\s+life))?\\s+(?:{{PERMANENT}}))|{{START}}(ending\\s+(?:it\\s+all|things|everything))\\b(?=\\s+(?:is|was|has|isn|wasn|would|will|feels|seems|sounds|keeps)\\b|\\s*['’]s\\b)",
       "flags": "i",
-      "note": "Bare \"ending it\" is ambiguous (relationships, meetings); it needs a thinking or intention frame, or \"I ... end it all\", and must not be followed by \"with\", \"there\", \"on\" and similar. \"For good\" and \"for real\" are allowed.",
+      "note": "Bare \"ending it\" is ambiguous (relationships, meetings); it needs a thinking or intention frame, or \"I ... end it all\", and must not be followed by \"with\", \"there\", \"on\" and similar. \"For good\" and \"for real\" are allowed. \"I'm going to let go for good\" (intransitive) is included.",
       "sources": [
         "srl-v1.0",
         "nimh-asq"
@@ -544,9 +652,9 @@
       "id": "si_active.want_to_die",
       "category": "suicidal_ideation_active",
       "level": "crisis",
-      "pattern": "\\b(?:want(?:s|ed)?|wanna|wan|wanting|ready|deserve|deserved|deserves|need|needs|longing|tryna)\\s+(?:to\\s+|2\\s+)?(?:just\\s+|finally\\s+)?(?:die|stop\\s+(?:living|breathing)|quit\\s+living)\\b(?!\\s+(?:back|down|off|out|laughing|of\\s+(?:laughter|embarrassment|boredom))\\b)",
+      "pattern": "\\b(?:want(?:s|ed)?|wanna|wan|wanting|ready|deserve|deserved|deserves|need|needs|longing|tryna)\\s+(?:to\\s+|2\\s+)?(?:just\\s+|finally\\s+)?(?:die|stop\\s+(?:living|breathing)|quit\\s+living)\\b(?!\\s+(?:back|down|off|out)\\b)",
       "flags": "i",
-      "note": "Wanting to die or to stop living.",
+      "note": "Wanting to die or to stop living. \"Die laughing\" and \"die of embarrassment\" are kept as findings for the idiom cues.",
       "sources": [
         "srl-v1.0",
         "nimh-asq"
@@ -570,7 +678,7 @@
       "id": "si_active.overdose",
       "category": "suicidal_ideation_active",
       "level": "crisis",
-      "pattern": "\\b(?=o)(?<!\\bof\\s)(?<!accidental\\s)(?<!\\bopioid\\s)(?<!\\bfatal\\s)(?<!\\bdrug\\s)(?<!\\brising\\s)(?<!\\bheroin\\s)(?<!\\bfentanyl\\s)(?:overdos(?:e|ed|ing)|od['’]?(?:ing|ed|d))\\b(?!\\s+(?:on\\s+(?:caffeine|sugar|coffee|content|tv|candy)|prevention|awareness|deaths?|crisis|epidemic|risk|reversal|kits?|rates?|statistics|stats|data|numbers|cases|victims|survivors|antidote|training)\\b)|\\b(?:took|swallowed|swallow|swallowing|downed|down|downing|popped|chugged)\\s+(?:a\\s+(?:bunch|handful|whole\\s+bottle|bottle|box|pack|packet|ton|load)\\s+of|(?:the\\s+)?(?:whole|entire)\\s+(?:bottle|box|pack|packet)\\s+of|every\\s+(?:single\\s+)?(?:one\\s+of\\s+)?|all\\s+(?:of\\s+)?|way\\s+too\\s+many|too\\s+many)\\s*(?:my\\s+|the\\s+|these\\s+|those\\s+)?(?:extra\\s+|sleeping\\s+)?(?:{{PILLS}})\\b|\\b(?:{{INTEND}}|(?:{{IDEATE}})(?:\\s+(?:{{ABOUT}}))?)\\s+(?:(?:just|actually|finally)\\s+)?(?:take|taking|swallow|swallowing|down|downing)\\s+(?:all|every|each)\\s+(?:single\\s+)?(?:of\\s+)?(?:my|the|these|those)?\\s*(?:extra\\s+|sleeping\\s+)?(?:{{PILLS}})\\b|\\b(?:take|taking)\\s+all\\s+(?:of\\s+)?(?:my|the)\\s+(?:{{PILLS}})\\s+at\\s+once\\b|\\b(?:took|swallowed|downed|popped|taken|took\\s+like)\\s+(?:like\\s+|about\\s+|around\\s+|over\\s+|at\\s+least\\s+|almost\\s+)?(?:[1-9]\\d|\\d{3}|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|a\\s+hundred|dozens\\s+of)\\s+(?:of\\s+(?:my|the|his|her)\\s+)?(?:\\w+\\s+)?(?:{{PILLS}})\\b|\\bevery\\s+(?:single\\s+)?(?:pill|tablet)\\s+in\\s+(?:the|my)\\s+(?:\\w+\\s+)?(?:cabinet|house|bottle|drawer|apartment)\\b|\\b(?:my\\s+plan\\s+is|(?:i['’]?m\\s+)?plan(?:ning)?)\\s+to\\s+(?:take|swallow|down)\\s+(?:all\\s+(?:of\\s+)?)?(?:the|my|these|those)\\s+(?:{{PILLS}})\\b|\\b(?:take|swallow|down)\\s+(?:all\\s+(?:of\\s+)?)?(?:the|my)\\s+(?:{{PILLS}})\\s+(?:when|once|after)\\s+(?:everyone|everybody|the\\s+kids|my\\s+\\w+)\\s+(?:is|are|['’]s|goes?|go)\\s+(?:asleep|to\\s+(?:bed|sleep)|out|away|gone)\\b",
+      "pattern": "\\b(?=o)(?<!\\bof\\s)(?<!accidental\\s)(?<!\\bopioid\\s)(?<!\\bfatal\\s)(?<!\\bdrug\\s)(?<!\\brising\\s)(?<!\\bheroin\\s)(?<!\\bfentanyl\\s)(?:overdos(?:e|ed|ing)|od['’]?(?:ing|ed|d))\\b(?!\\s+(?:on\\s+(?:caffeine|sugar|coffee|content|tv|candy)|prevention|awareness|deaths?|crisis|epidemic|risk|reversal|kits?|rates?|statistics|stats|data|numbers|cases|victims|survivors|antidote|training)\\b)|\\b(?:took|swallowed|swallow|swallowing|downed|down|downing|popped|chugged)\\s+(?:a\\s+(?:bunch|handful|whole\\s+bottle|bottle|box|pack|packet|ton|load)\\s+of|(?:the\\s+)?(?:whole|entire)\\s+(?:bottle|box|pack|packet)\\s+of|every\\s+(?:single\\s+)?(?:one\\s+of\\s+)?|all\\s+(?:of\\s+)?|way\\s+too\\s+many|too\\s+many)\\s*(?:my\\s+|the\\s+|these\\s+|those\\s+)?(?:extra\\s+|sleeping\\s+)?(?:{{PILLS}})\\b|\\b(?:{{INTEND}}|(?:{{IDEATE}})(?:\\s+(?:{{ABOUT}}))?)\\s+(?:(?:just|actually|finally)\\s+)?(?:take|taking|swallow|swallowing|down|downing)\\s+(?:all|every|each)\\s+(?:single\\s+)?(?:one\\s+)?(?:of\\s+)?(?:my|the|these|those)?\\s*(?:extra\\s+|sleeping\\s+)?(?:{{PILLS}})\\b|\\b(?:take|taking)\\s+all\\s+(?:of\\s+)?(?:my|the)\\s+(?:{{PILLS}})\\s+at\\s+once\\b|\\b(?:took|swallowed|downed|popped|taken|took\\s+like)\\s+(?:like\\s+|about\\s+|around\\s+|over\\s+|at\\s+least\\s+|almost\\s+)?(?:[1-9]\\d|\\d{3}|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|a\\s+hundred|dozens\\s+of)\\s+(?:of\\s+(?:my|the|his|her)\\s+)?(?:\\w+\\s+)?(?:{{PILLS}})\\b|\\bevery\\s+(?:single\\s+)?(?:pill|tablet)\\s+in\\s+(?:the|my)\\s+(?:\\w+\\s+)?(?:cabinet|house|bottle|drawer|apartment)\\b|\\b(?:my\\s+plan\\s+is|(?:i['’]?m\\s+)?plan(?:ning)?)\\s+to\\s+(?:take|swallow|down)\\s+(?:all\\s+(?:of\\s+)?)?(?:the|my|these|those)\\s+(?:{{PILLS}})\\b|\\b(?:take|swallow|down)\\s+(?:all\\s+(?:of\\s+)?)?(?:the|my)\\s+(?:{{PILLS}})\\s+(?:when|once|after)\\s+(?:everyone|everybody|the\\s+kids|my\\s+\\w+)\\s+(?:is|are|['’]s|goes?|go)\\s+(?:asleep|to\\s+(?:bed|sleep)|out|away|gone)\\b|\\b(?:{{INTEND}}|(?:{{IDEATE}})(?:\\s+(?:{{ABOUT}}))?)\\s+(?:(?:just|actually|finally)\\s+)?(?:take|taking|swallow|swallowing|down|downing)\\s+(?:the|a|my)\\s+(?:whole|entire|full)\\s+(?:bottle|box|pack|packet|blister\\s+pack)\\b|\\boverdos(?:e|es)\\s+(?:that|which)\\s+(?:were|was)(?:n['’]?t|nt|\\s+not)\\s+(?:an?\\s+)?accident(?:s|al)?\\b|\\b(?:intentional|deliberate|on-purpose)\\s+overdos(?:e|es)\\b",
       "flags": "i",
       "note": "Overdose wording counts as an act; a distant past anchor turns it into history. \"Take all my pills\" needs an intention or ideation frame or \"at once\", so a medication routine does not match.",
       "sources": [
@@ -582,7 +690,7 @@
       "id": "si_active.method",
       "category": "suicidal_ideation_active",
       "level": "crisis",
-      "pattern": "\\b(?:hang|hanging|hanged|shoot|shooting|shot|drown|drowning|drowned|poison|poisoning|poisoned|suffocate|suffocating|electrocute|electrocuting|gas|gassing|stab|stabbing|stabbed)\\s+(?:my|him|her|them|your)sel(?:f|ves)\\b(?!\\s+(?:a|an|the|some)\\s+(?:email|e-mail|note|text|message|reminder|link|invite|copy|dm)\\b)(?!\\s+in\\s+(?:the\\s+foot|work|coffee|wine|alcohol|booze|tea|paperwork|emails?|homework|chores|books|music|tv|food|sugar|projects?|my\\s+(?:work|job|studies))\\b)|\\b(?:slit|slitting|slash|slashing|cut|cutting|open|opening)\\s+(?:my|his|her|their)\\s+(?:own\\s+)?wrists?\\b|\\bput\\s+a\\s+(?:gun|bullet|pistol)\\s+(?:to|in)\\s+my\\s+(?:head|mouth|temple)\\b|\\b(?:use|using|used|turn|turning|turned)\\s+(?:it|the\\s+(?:gun|knife|blade|razor|pills)|a\\s+(?:gun|knife|blade|razor))\\s+on\\s+myself\\b|\\bblow\\s+my\\s+(?:brains|head)\\s+(?:out|off)\\b|\\b(?:a\\s+)?hose\\s+(?:from|to|on|in|into|attached\\s+to|connected\\s+to|running\\s+(?:from|to|into))\\s+(?:the\\s+)?(?:exhaust|tailpipe)\\b",
+      "pattern": "\\b(?:hang|hanging|hanged|shoot|shooting|shot|drown|drowning|drowned|poison|poisoning|poisoned|suffocate|suffocating|electrocute|electrocuting|gas|gassing|stab|stabbing|stabbed)\\s+(?:my|him|her|them|your)sel(?:f|ves)\\b(?!\\s+(?:a|an|the|some)\\s+(?:email|e-mail|note|text|message|reminder|link|invite|copy|dm)\\b)(?!\\s+in\\s+(?:the\\s+foot|work|coffee|wine|alcohol|booze|tea|paperwork|emails?|homework|chores|books|music|tv|food|sugar|projects?|my\\s+(?:work|job|studies))\\b)|\\b(?:slit|slitting|slash|slashing|cut|cutting|open|opening)\\s+(?:my|his|her|their)\\s+(?:own\\s+)?wrists?\\b|\\bput\\s+a\\s+(?:gun|bullet|pistol)\\s+(?:to|in)\\s+my\\s+(?:head|mouth|temple)\\b|\\b(?:use|using|used|turn|turning|turned)\\s+(?:it|the\\s+(?:gun|knife|blade|razor|pills)|a\\s+(?:gun|knife|blade|razor))\\s+on\\s+myself\\b|\\bblow\\s+my\\s+(?:brains|head)\\s+(?:out|off)\\b|\\b(?:a\\s+)?hose\\s+(?:for|from|to|on|in|into|attached\\s+to|connected\\s+to|running\\s+(?:from|to|into))\\s+(?:the\\s+|my\\s+)?(?:car['’]?s?\\s+)?(?:exhaust|tailpipe)\\b",
       "flags": "i",
       "note": "Method wording. Figurative \"shoot myself in the foot\" and \"drowning myself in work\" are excluded.",
       "sources": [
@@ -618,9 +726,9 @@
       "id": "si_active.ways_to_die",
       "category": "suicidal_ideation_active",
       "level": "crisis",
-      "pattern": "\\b(?:painless|quick|quickest|easy|easiest|peaceful|best|fastest|surest|least\\s+painful)\\s+(?:way|ways|method|methods)\\s+to\\s+(?:die|go|kill\\s+(?:myself|yourself)|end\\s+(?:it|my\\s+life|things)|commit\\s+(?:{{SUICIDE}})|overdose|od)\\b|\\bhow\\s+(?:to|i\\s+(?:could|would|can|should|might))\\s+(?:die|kill\\s+myself|end\\s+(?:it\\s+all|my\\s+life))\\b(?!\\s+(?:in|on)\\s+(?:the|a)\\s+game)|\\bhow\\s+(?:many|much)\\s+(?:of\\s+)?(?:my\\s+|the\\s+|these\\s+|those\\s+)?(?:{{PILLS}})\\s+(?:(?:would|does|will|do|it)\\s+(?:it\\s+)?(?:take|need)\\s+to\\s+(?:die|kill\\s+(?:me|myself|someone|a\\s+person)|overdose|od|not\\s+wake\\s+up)|(?:it\\s+)?(?:would|['’]d|wud|it['’]?d)\\s+(?:it\\s+)?(?:take|need)\\b(?!\\s+(?:a\\s+day|daily|per|each|every|in\\s+the|at\\s+night|with|for\\s+(?:a|the|my)\\s+(?:headache|cold|fever|pain|back))\\b)|it\\s+takes\\s+to\\s+(?:die|overdose|od|kill))\\b",
+      "pattern": "\\b(?:painless|quick|quickest|easy|easiest|peaceful|best|fastest|surest|least\\s+painful)\\s+(?:way|ways|method|methods)\\s+to\\s+(?:die|go|kill\\s+(?:myself|yourself)|end\\s+(?:it|my\\s+life|things)|commit\\s+(?:{{SUICIDE}})|overdose|od)\\b|\\bhow\\s+(?:to|i\\s+(?:could|would|can|should|might))\\s+(?:die|kill\\s+myself|end\\s+(?:it\\s+all|my\\s+life))\\b(?!\\s+(?:in|on)\\s+(?:the|a)\\s+game)|\\bhow\\s+(?:many|much)\\s+(?:of\\s+)?(?:my\\s+|the\\s+|these\\s+|those\\s+)?(?:{{PILLS}})\\s+(?:(?:would|does|will|do|it)\\s+(?:it\\s+)?(?:take|need)\\s+to\\s+(?:die|kill\\s+(?:me|myself|someone|a\\s+person)|overdose|od|not\\s+wake\\s+up)|(?:it\\s+)?(?:would|['’]d|wud|it['’]?d)\\s+(?:it\\s+)?(?:take|need)\\b(?!\\s+(?:a\\s+day|daily|per|each|every|in\\s+the|at\\s+night|with|for\\s+(?:a|the|my)\\s+(?:headache|cold|fever|pain|back))\\b)|it\\s+takes\\s+to\\s+(?:die|overdose|od|kill|(?:not|never)\\s+wake\\s+up))\\b|\\b(?:read(?:ing)?|look(?:ing|ed)?|research(?:ing|ed)?|googl(?:ing|ed)|search(?:ing|ed))\\s+(?:up\\s+)?(?:on|about|into|for)?\\s*(?:which|what|the)\\s+(?:methods?|ways?)\\s+(?:hurt|hurts|are|is|would\\s+(?:hurt|be))\\s+(?:the\\s+)?(?:least|less|quickest|fastest|surest|most\\s+(?:painless|reliable|effective|certain)|painless|least\\s+painful)\\b|\\b(?:research(?:ing|ed)?|look(?:ing|ed)?\\s+(?:up|into)|googl(?:ing|ed)|search(?:ing|ed)(?:\\s+for)?|check(?:ing|ed)|read(?:ing)?\\s+up\\s+on)\\s+(?:which|what)\\s+(?:{{DROP}})\\s+(?:is|are|would\\s+be)\\s+(?:high|tall|deep)\\s+enough\\b|\\bhow\\s+(?:high|far)\\s+(?:a\\s+)?(?:fall|drop|jump)\\s+(?:has\\s+to\\s+be|needs\\s+to\\s+be|would\\s+have\\s+to\\s+be|it\\s+takes)\\b",
       "flags": "i",
-      "note": "Researching ways to die, or how many pills it would take.",
+      "note": "Researching ways to die, how many pills it would take, or which methods hurt the least.",
       "sources": [
         "srl-v1.0"
       ],
@@ -639,6 +747,66 @@
       "relation": "informed-by"
     },
     {
+      "id": "si_active.method_imagery",
+      "category": "suicidal_ideation_active",
+      "level": "crisis",
+      "pattern": "\\b(?:{{IMAGINE}}){{IMAGERY_FILL}}\\s+(?:(?:driv(?:e|es|ing)|steer(?:s|ing)?|swerv(?:e|es|ing)|veer(?:s|ing)?|drift(?:s|ing)?|jerk(?:s|ing)?\\s+the\\s+wheel|turn(?:s|ing)?\\s+the\\s+wheel|yank(?:s|ing)?\\s+the\\s+wheel|accelerat(?:e|es|ing)|floor(?:s|ing)?\\s+it|gun(?:s|ning)?\\s+it|plow(?:s|ing)?|plough(?:s|ing)?|ram(?:s|ming)?|slam(?:s|ming)?)(?:\\s+and\\s+(?:go|drive|plunge|fly|end\\s+up|head|veer))?\\s+(?:(?:my|the)\\s+(?:car|truck)\\s+)?(?:(?:straight|right|head\\s*first|at\\s+full\\s+speed|full\\s+speed)\\s+)?(?:into|off(?:\\s+of)?|over|in\\s+front\\s+of|under|onto|through)\\s+(?:(?:a|an|the|this|that|some|oncoming|one\\s+of\\s+the|the\\s+next)\\s+)?(?:[\\w-]+\\s+){0,2}?(?:traffic|oncoming(?:\\s+(?:traffic|cars?|lanes?|trucks?))?|lanes?|semis?|trucks?|lorr(?:y|ies)|bus(?:es)?|trains?|cars?|trees?|walls?|poles?|pillars?|median|barriers?|guard\\s?rails?|railings?|rails?|bridges?|overpass|cliffs?|edge|river|lake|ocean|sea|water|reservoir|harbou?r|canal|quarry|ditch|embankment|pier|dock|it|them|one)\\b|let(?:s|ting)?\\s+go\\s+of\\s+the\\s+(?:steering\\s+)?wheel\\b|not\\s+(?:braking|hitting\\s+the\\s+brakes?|turning\\s+the\\s+wheel|turning\\s+(?:at|into)\\s+the\\s+(?:curve|bend|turn|corner))\\b|(?:my|the)\\s+(?:car|truck)\\s+(?:going|flying|veering|swerving|plunging|rolling|sailing|careening|skidding|launching|hitting|slamming\\s+into|smashing\\s+into|crashing\\s+into|wrapped\\s+around|wrapping\\s+around)\\s+(?:off\\s+|over\\s+|into\\s+|through\\s+)?(?:the\\s+|a\\s+)?(?:[\\w-]+\\s+){0,2}?(?:road|cliff|bridge|overpass|edge|barrier|guard\\s?rail|rail|railing|median|wall|tree|pole|pillar|river|lake|embankment|pier|ravine|ditch|truck|semi|train)\\b|(?:step(?:s|ping|ped)?|walk(?:s|ing|ed)?|go(?:es|ing)?|went|fall(?:s|ing)?|tip(?:s|ping)?|roll(?:s|ing)?|slip(?:s|ping)?|climb(?:s|ing)?)\\s+(?:off(?:\\s+of)?|over|out\\s+(?:of|over|from)|from|through)\\s+(?:(?:the|a|my|this|that)\\s+)?(?:[\\w-]+\\s+){0,2}?(?:roof|rooftop|ledge|edge|balcony|bridge|platform|cliff|fire\\s+escape|overpass|railing|rail|guard\\s?rail|parapet|building|tower|(?:\\w+(?:th|st|nd|rd)|top|highest)\\s+floor)\\b|(?:ly(?:ing)?|lie|lay(?:ing)?|stand(?:ing)?|sit(?:ting)?)\\s+(?:down\\s+)?(?:on|across|in\\s+front\\s+of)\\s+(?:the|a)\\s+(?:train\\s+|railway\\s+|subway\\s+)?(?:tracks|rails|railway|railroad|road|highway|motorway|freeway)\\b|(?:step(?:s|ped|ping)?|walk(?:s|ed|ing)?|run(?:s|ning)?|jump(?:s|ed|ing)?|throw(?:s|ing)?\\s+myself)\\s+(?:out\\s+)?(?:onto|into|in\\s+front\\s+of|under)\\s+(?:the|a|an|oncoming)\\s+(?:[\\w:-]+\\s+){0,2}?(?:tracks|rails|trains?|express|subway|tube|tram|metro|bus(?:es)?|trucks?|lorr(?:y|ies)|semis?|traffic|road|street|highway|motorway|freeway)\\b|(?:the|a|my)\\s+(?:[\\w-]+\\s+){0,2}?(?:knife|knives|razor|razors|blade|blades|gun|pistol)\\s+and\\s+my\\s+(?:wrists?|throat|neck|head|temple)\\b|(?:the|a|my)\\s+(?:rope|noose|belt|cord)\\s+and\\s+(?:the|a)\\s+(?:hook|beam|rafters?|ceiling\\s+fan|fan|banister|pipe|tree|branch)\\b|lean(?:s|ing)?\\s+(?:forward|out|over|in)\\s+(?:just\\s+)?(?:when|as|while|right\\s+when|just\\s+as)\\s+(?:the|a)\\s+(?:[\\w-]+\\s+){0,2}?(?:train|express|subway|tube|tram|bus|truck|lorry|semi)\\b|(?:step|walk|run|stepping|walking|running)\\s+(?:out\\s+)?(?:into\\s+(?:the\\s+)?(?:road|street|traffic|highway|crossing)\\s+)?without\\s+looking\\b|(?:slid(?:e|es|ing)|slip(?:s|ping)?|sink(?:s|ing)?|go(?:es|ing)?|duck(?:s|ing)?)\\s+under(?:\\s+the\\s+(?:water|surface))?\\s+and\\s+(?:just\\s+)?(?:stay(?:s|ing)?(?:\\s+(?:there|under|down))?|(?:not|never)\\s+(?:com(?:e|ing)\\s+(?:back\\s+)?up|surfac(?:e|ing)))\\b|let(?:s|ting)?\\s+the\\s+(?:current|waves?|tide|water|river|sea|ocean|undertow)\\s+(?:take|pull|carry|drag)\\s+me\\b|(?:wrap(?:s|ping|ped)?|ti(?:e|es|ed)|tying|loop(?:s|ing|ed)?|put(?:s|ting)?|tighten(?:s|ing)?)\\s+(?:a|the|my|this|that)\\s+(?:[\\w-]+\\s+){0,4}?(?:cord|rope|belt|scarf|cable|wire|sheet|leash|ligature|noose|strap)(?:\\s+[\\w-]+){0,4}?\\s+around\\s+my\\s+(?:own\\s+)?neck\\b)",
+      "flags": "i",
+      "note": "Method imagery without death words: an imagery or urge frame plus a concrete act (not braking at the curve, swerving into a truck, letting go of the wheel on the bridge, stepping off the roof, lying on the tracks, sliding under the bath water and staying there, a cord around my neck). The frame keeps everyday driving, swimming and sightseeing out.",
+      "sources": [
+        "srl-v1.0"
+      ],
+      "relation": "informed-by"
+    },
+    {
+      "id": "si_active.method_in_context",
+      "category": "suicidal_ideation_active",
+      "level": "crisis",
+      "pattern": "(?:\\b(?:{{IMAGINE}}|notic(?:e|es|ed|ing)|measur(?:e|es|ed|ing)|calculat(?:e|es|ed|ing))|{{START}}like){{IMAGERY_FILL}}\\s+((?:step(?:ping)?|go(?:ing)?|lean(?:ing)?|jump(?:ing)?|fall(?:ing)?|tip(?:ping)?|slip(?:ping)?|climb(?:ing)?)\\s+(?:off|over|out|forward)(?=\\s*[.!?,;]|\\s*(?![\\s\\S])|\\s+(?:and|again|every|when|too|a\\s+little|further|already)\\b)|how\\s+(?:high|tall|far\\s+down|far\\s+(?:the\\s+)?(?:drop|fall)\\s+(?:is|was|would\\s+be)|long\\s+the\\s+(?:drop|fall)|deep\\s+the\\s+water)\\b|(?:tak(?:e|ing)|swallow(?:ing)?|down(?:ing)?)\\s+(?:all|every\\s+(?:single\\s+)?one)\\s+of\\s+(?:them|those|these)(?:\\s+at\\s+once|\\s+together|\\s+in\\s+one\\s+go)?|how\\s+many\\s+(?:of\\s+(?:them|those|these)\\s+)?(?:it|they)\\s+(?:would|['’]d|will|might)\\s+take)",
+      "flags": "i",
+      "note": "Anaphoric method imagery (\"I pictured stepping off\", \"how far down the rocks are\", \"how many it would take\", \"like taking all of them at once\"). The act has no object, so it counts only with a high place, tracks or pills in the same, previous or next sentence. A clause-initial \"like\" continues the previous sentence's thought (\"i think about the pills a lot. like taking all of them at once\").",
+      "sources": [
+        "srl-v1.0"
+      ],
+      "relation": "informed-by",
+      "context": {
+        "scope": "adjacent",
+        "pattern": "{{DROP}}|{{MEANS}}|\\brocks\\b",
+        "flags": "i"
+      }
+    },
+    {
+      "id": "si_active.vague_act_in_context",
+      "category": "suicidal_ideation_active",
+      "level": "crisis",
+      "pattern": "{{SELF}}{{FILL}}\\s+(?:(get\\s+it\\s+right\\s+this\\s+time|(?:finish|do)\\s+it\\s+(?:properly|right)\\s+this\\s+time|not\\s+(?:fail|mess\\s+(?:it\\s+)?up|screw\\s+(?:it\\s+)?up)\\s+(?:again|this\\s+time))\\b|((?:finally\\s+)?(?:finish|end|do)\\s+it(?:\\s+all)?)\\b(?!\\s+(?:with|off|up|by|for\\s+(?:you|him|her|them|us|fun|free|money|work|school|class)|in\\s+time|on\\s+time|right|wrong|properly|again\\s+(?:sometime|soon)|later|myself|together|first|now\\s+and)\\b)|(go\\s+through\\s+with\\s+it|finish\\s+(?:what\\s+i\\s+started|the\\s+job))\\b|((?:almost|nearly|so\\s+close\\s+to\\s+being|close\\s+to\\s+being)\\s+(?:there|ready|enough))(?=\\s*[.!?,;]|\\s*(?![\\s\\S]))|(done\\s+with\\s+(?:all\\s+of\\s+)?(?:this|it|everything))(?=\\s*[.!?,;]|\\s*(?![\\s\\S]))|((?:going|heading|walking|driving|off)\\s+(?:up\\s+|out\\s+|back\\s+)?to\\s+the\\s+(?:{{DROP}}))\\b)|\\b(?:nerve|courage|guts|strength|balls)\\s+to\\s+((?:actually\\s+|finally\\s+)?(?:do|go\\s+through\\s+with)\\s+it)\\b|\\bhow\\s+((?:i['’]?d|i\\s+would|i['’]?ll|i\\s+will|i['’]?m\\s+going\\s+to|i\\s+am\\s+going\\s+to|i\\s+could)\\s+do\\s+it)\\b|\\b((?:when|before|once|after)\\s+i\\s+(?:go|leave|do\\s+it|end\\s+it|finally\\s+do\\s+it|finish\\s+it))(?=\\s*[.!?,;]|\\s*(?![\\s\\S]))|\\b(where\\s+i['’]?m\\s+going)\\b(?!\\s+(?:to|with|for|on|next|tonight|tomorrow|this|after|now|in)\\b)|\\b((?:for\\s+)?(?:when|after|once|if)\\s+(?:they|someone|somebody|people|you|anyone|my\\s+\\w+|the\\s+police)\\s+(?:find|finds|found)\\s+me)\\b(?!\\s+(?:a|an|the|some|another|work|out|attractive|annoying|interesting|funny)\\b)|\\b(whether\\s+(?:anyone|anybody|someone|people)\\s+would\\s+(?:even\\s+)?find\\s+me)\\b|\\b((?:it|everything|it\\s+all)\\s*(?:['’]ll|\\s+will|\\s+is\\s+going\\s+to|['’]s\\s+going\\s+to|['’]s\\s+gonna|\\s+is\\s+gonna)\\s+(?:all\\s+)?be\\s+over\\s+(?:soon|tonight|tomorrow|shortly|by\\s+(?:then|morning|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)))\\b|{{START}}(this\\s+is\\s+it)(?=\\s*[.!?]|\\s*(?![\\s\\S]))|\\b((?:don['’]?t|do\\s+not|won['’]?t|will\\s+not|wont)\\s+(?:need|be\\s+needing)\\s+(?:any\\s+of\\s+)?(?:it|this|them|that|anything|these|those))(?=\\s+(?:where\\s+i['’]?m\\s+going|after\\s+(?:this|tonight|today|tomorrow|\\w+day)|anymore|any\\s*more|soon)\\b|\\s*[.!?,;]|\\s*(?![\\s\\S]))|\\b((?:don['’]?t|do\\s+not|not)\\s+(?:intend|plan|expect)(?:ing)?\\s+(?:on|to)\\s+(?:still\\s+)?(?:be|being)\\s+(?:here|around|alive))\\b|\\b(?:i['’]?m|im|i\\s+am)\\s+(?:(?:so|finally|just|really)\\s+)?(ready\\s+to\\s+go)(?=\\s*[.,;]|\\s*(?![\\s\\S])|\\s+now\\b(?!\\s*!))|\\b(at\\s+peace\\s+with\\s+(?:leaving|going|it\\s+all|my\\s+decision|the\\s+decision|dying|what\\s+i['’]?m\\s+(?:about\\s+to\\s+do|going\\s+to\\s+do)))\\b|\\bto\\s+(make\\s+(?:it|everything|it\\s+all|the\\s+pain|this)\\s+stop\\s+(?:{{PERMANENT}}))|{{START}}((?:tomorrow|tonight|today|this\\s+weekend|(?:this|next)\\s+week|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\\s+(?:is|['’]s)\\s+(?:the\\s+(?:day|night)|it))\\b|\\b((?:don['’]?t|do\\s+not)\\s+think\\s+(?:i['’]?m|i\\s+am|im|i['’]?ll\\s+be|i\\s+will\\s+be)\\s+coming\\s+(?:back|home)|(?:i['’]?m|i\\s+am|im)\\s+(?:not|never)\\s+coming\\s+(?:back|home)|(?:i\\s+)?(?:won['’]?t|will\\s+not|wont)\\s+be\\s+coming\\s+(?:back|home))\\b(?!\\s+(?:to\\s+(?:this|that|the|work|school|class)|until|till|for|tonight|today|after|before|on)\\b)|\\b((?:know|picked|chosen|found)\\s+(?:exactly\\s+)?(?:which|what|the)\\s+(?:beam|branch|tree|bridge|building|roof|cliff|overpass|spot|place))\\b",
+      "flags": "i",
+      "note": "Vague and anaphoric wording (\"I'm going to finish it\", \"how I'd do it\", \"for when they find me\", \"it'll all be over soon\", \"this is it\", \"I don't need any of it where I'm going\"). It is crisis language only next to crisis language, means, a plan, preparation or a high place in the same, previous or next sentence; otherwise it yields no finding, and distress.vague_finality covers the forms that are alarming on their own.",
+      "sources": [
+        "srl-v1.0",
+        "nimh-warning-signs"
+      ],
+      "relation": "informed-by",
+      "context": {
+        "scope": "adjacent",
+        "categories": [
+          "suicidal_ideation_passive",
+          "suicidal_ideation_active",
+          "self_harm",
+          "unsafe_with_self",
+          "history"
+        ],
+        "rules": [
+          "immediacy.plan",
+          "immediacy.means",
+          "immediacy.preparation",
+          "immediacy.location"
+        ],
+        "pattern": "{{DROP}}|{{LETHAL}}|(?:{{IDEATE}})\\s+(?:{{ABOUT}})\\s+(?:the|my|those|these|all\\s+(?:the|my))\\s+(?:\\w+\\s+)?(?:{{MEANS}})\\b",
+        "flags": "i"
+      }
+    },
+    {
       "id": "si_active.enough_to_die",
       "category": "suicidal_ideation_active",
       "level": "crisis",
@@ -655,7 +823,7 @@
       "id": "si_active.intent_not_alive",
       "category": "suicidal_ideation_active",
       "level": "crisis",
-      "pattern": "\\b(?:don['’]?t|dont|do\\s+not|not|am\\s+not|['’]m\\s+not|no\\s+longer)\\s+(?:plan(?:ning)?|intend(?:ing)?|expect(?:ing)?)\\s+(?:on|to)\\s+(?:still\\s+)?(?:be|being)\\s+(?:alive\\b|(?:here|around)\\b(?=\\s+(?:much\\s+longer|for\\s+much\\s+longer|anymore|any\\s+longer|by\\s+(?:then|next|the\\s+end)|this\\s+time\\s+next|next\\s+(?:year|month)|to\\s+see)\\b))|\\bwon['’]?t\\s+be\\s+alive\\s+(?:by|for|at|next|to\\s+see)\\b|\\b(?:don['’]?t|dont|do\\s+not|can['’]?t|cant|cannot)\\s+(?:really\\s+|even\\s+)?(?:see|picture|imagine)\\s+myself\\s+(?:(?:being|still)\\s+)?(?:alive\\b|living\\s+(?:past|beyond|much\\s+longer|another|to\\s+see|until|till)\\b|making\\s+it\\s+(?:past|to|through)\\b)",
+      "pattern": "\\b(?:don['’]?t|dont|do\\s+not|not|am\\s+not|['’]m\\s+not|no\\s+longer)\\s+(?:plan(?:ning)?|intend(?:ing)?|expect(?:ing)?)\\s+(?:on|to)\\s+(?:still\\s+)?(?:be|being)\\s+(?:alive\\b|(?:here|around)\\b(?=\\s+(?:much\\s+longer|for\\s+much\\s+longer|anymore|any\\s+longer|by\\s+(?:then|next|the\\s+end)|this\\s+time\\s+next|next\\s+(?:year|month)|to\\s+see)\\b))|\\bwon['’]?t\\s+be\\s+alive\\s+(?:by|for|at|next|to\\s+see)\\b|\\b(?:don['’]?t|dont|do\\s+not|can['’]?t|cant|cannot)\\s+(?:really\\s+|even\\s+)?(?:see|picture|imagine)\\s+myself\\s+(?:(?:being|still)\\s+)?(?:alive\\b|living\\s+(?:past|beyond|much\\s+longer|another|to\\s+see|until|till)\\b|making\\s+it\\s+(?:past|to|through)\\b)|\\bby\\s+(?:then|that\\s+(?:time|point|day)|next\\s+(?:week|month|year|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|the\\s+(?:weekend|end\\s+of\\s+(?:the\\s+)?(?:week|month|year)))\\s*,?\\s+i\\s+(?:won['’]?t|will\\s+not|wont)\\s+be\\s+(?:alive|here|around)\\b",
       "flags": "i",
       "note": "Intent not to be alive (\"I don't plan on being alive this time next year\"). The \"don't\" is part of the phrase, not a denial.",
       "sources": [
@@ -692,9 +860,9 @@
       "id": "si_active.suicide_option",
       "category": "suicidal_ideation_active",
       "level": "crisis",
-      "pattern": "\\b({{SUICIDE}}|killing\\s+myself|ending\\s+my\\s+life|dying)\\s+(?=(?:is|isn['’]?t|isnt|is\\s+not|['’]s|feels|seems|has\\s+(?:become|been)|was|wasn['’]?t|keeps|is\\s+starting\\s+to|starts\\s+to)\\s+(?:(?:not|never|really|honestly|even|starting\\s+to|kind\\s+of|kinda|like|becoming|looking|sounding|more\\s+and\\s+more)\\s+)*(?:(?:on|off)\\s+the\\s+table|an\\s+option|(?:the|my)\\s+(?:only\\s+|best\\s+|last\\s+|easiest\\s+)?(?:option|answer|way\\s+out|solution|choice|escape|exit|way)|(?:look|sound|seem)\\s+(?:good|better|appealing|tempting|easier)|appealing|tempting|attractive|calling\\s+(?:me|to\\s+me)))",
+      "pattern": "\\b({{SUICIDE}}|killing\\s+myself|ending\\s+my\\s+life|dying)\\s+(?=(?:is|isn['’]?t|isnt|is\\s+not|['’]s|feels|seems|has\\s+(?:(?:never|not)\\s+)?(?:become|been)|hasn['’]?t\\s+(?:become|been)|was|wasn['’]?t|keeps|is\\s+starting\\s+to|starts\\s+to)\\s+(?:(?:not|never|really|honestly|even|starting\\s+to|kind\\s+of|kinda|like|becoming|looking|sounding|more\\s+and\\s+more)\\s+)*(?:(?:on|off)\\s+the\\s+table|an\\s+option|(?:the|my)\\s+(?:only\\s+|best\\s+|last\\s+|easiest\\s+)?(?:option|answer|way\\s+out|solution|choice|escape|exit|way)|(?:look|sound|seem)\\s+(?:good|better|appealing|tempting|easier)|appealing|tempting|attractive|calling\\s+(?:me|to\\s+me)|what\\s+i\\s+(?:want|need)|(?:the|my)\\s+(?:plan|goal)|on\\s+my\\s+mind))",
       "flags": "i",
-      "note": "Suicide or dying framed as an option (\"suicide feels like the only way out\"). The span is the noun; a denial after it (\"isn't on the table\") is handled by negated.post_denial.",
+      "note": "Suicide or dying framed as an option, a plan or what I want (\"suicide feels like the only way out\", \"dying is what I want\"). The span is the noun; a denial after it (\"isn't on the table\", \"has never been an option\", \"isn't what I want\") is handled by negated.post_denial.",
       "sources": [
         "srl-v1.0",
         "nimh-asq"
@@ -1194,7 +1362,7 @@
       "id": "distress.ambiguous_die",
       "category": "acute_distress",
       "level": "concern",
-      "pattern": "\\b(?:i['’]m|im|i\\s+am|i\\s+was|i['’]d|i\\s+would|i\\s+could|i\\s+might|i\\s+nearly|i\\s+almost|i\\s+just|i\\s+literally|i\\s+feel|i\\s+felt|i['’]ll|i\\s+will|i['’]ve|ive|i\\s+have|i)(?:\\s+(?:just|literally|really|so|nearly|almost|practically|rather|actually|honestly|basically|totally|gonna|going\\s+to|about\\s+to|feel|feeling|be|been|kinda|lowkey|already|half|legit|fully|completely))*\\s+(?:die|dying|dead|died)\\b|\\bmy\\s+(?:legs|arms|feet|calves|quads|glutes|abs|back|hands|thighs|body|brain|soul|heart)\\s+(?:is|are|feel|feels|['’]re|were|was)\\s+(?:(?:so|literally|completely|totally|basically)\\s+)?dead\\b|\\b(?:is|are|was|were|looks?|looked|sounds?|tastes?|smells?|['’]s|['’]re)\\s+(?:(?:literally|absolutely|just|totally|so|simply)\\s+)?to[\\s-]die[\\s-]for\\b|\\bto-die-for\\b|\\b(?:joke|jokes|set|bit|show|pitch|presentation|idea|plan|conversation|party|mood|vibe|battery|phone|laptop|car|startup|project|deal|career|band|chat|thread|game|server|motivation|social\\s+life|plants?)\\s+(?:(?:completely|totally|just|kinda|basically|literally|almost|nearly|finally|officially)\\s+)?(?:died|dies)\\b|\\bdeath\\s+by\\s+(?!(?:suicide|overdose|hanging|drowning|gunshot|misadventure|homicide|cop|police|lethal)\\b)[a-z]+",
+      "pattern": "\\b(?:i['’]m|im|i\\s+am|i\\s+was|i['’]d|i\\s+would|i\\s+could|i\\s+might|i\\s+nearly|i\\s+almost|i\\s+just|i\\s+literally|i\\s+feel|i\\s+felt|i['’]ll|i\\s+will|i['’]ve|ive|i\\s+have|i)(?:\\s+(?:just|literally|really|so|nearly|almost|practically|rather|actually|honestly|basically|totally|gonna|going\\s+to|about\\s+to|feel|feeling|be|been|kinda|lowkey|already|half|legit|fully|completely))*\\s+(?:die|dying|dead|died|deceased)\\b|\\bmy\\s+(?:legs|arms|feet|calves|quads|glutes|abs|back|hands|thighs|body|brain|soul|heart)\\s+(?:is|are|feel|feels|['’]re|were|was)\\s+(?:(?:so|literally|completely|totally|basically)\\s+)?dead\\b|\\b(?:is|are|was|were|looks?|looked|sounds?|tastes?|smells?|['’]s|['’]re)\\s+(?:(?:literally|absolutely|just|totally|so|simply)\\s+)?to[\\s-]die[\\s-]for\\b|\\bto-die-for\\b|\\b(?:joke|jokes|set|bit|show|pitch|presentation|idea|plan|conversation|party|mood|vibe|battery|phone|laptop|car|startup|project|deal|career|band|chat|thread|game|server|motivation|social\\s+life|plants?)\\s+(?:(?:completely|totally|just|kinda|basically|literally|almost|nearly|finally|officially)\\s+)?(?:died|dies)\\b|\\bdeath\\s+by\\s+(?!(?:suicide|overdose|hanging|drowning|gunshot|misadventure|homicide|cop|police|lethal)\\b)[a-z]+|\\bhad\\s+(?:me|us|him|her|them|everyone|everybody|the\\s+(?:whole\\s+)?(?:room|crowd|audience|class|table|office|team|chat|group\\s+chat))\\s+(?:(?:literally|absolutely|just|so)\\s+)?(?:dying|dead|deceased|on\\s+the\\s+floor)\\b(?!\\s+inside\\b)",
       "flags": "i",
       "note": "Ambiguous death words: first-person \"I'm dying\", \"I could just die\", \"I literally died\"; \"my legs are dead\"; \"to die for\"; \"the joke died\"; \"death by PowerPoint\". Usually figurative: idiom cues suppress the common uses, and what is left gets a human look at concern (recall first).",
       "sources": [
@@ -1310,6 +1478,28 @@
       "relation": "informed-by"
     },
     {
+      "id": "distress.vague_finality",
+      "category": "acute_distress",
+      "level": "concern",
+      "pattern": "\\b(?:this\\s+is|this['’]?ll\\s+be|this\\s+will\\s+be)\\s+the\\s+last\\s+(?:time\\s+)?(?:you['’]?ll|you\\s+will|anyone\\s+will|anybody\\s+will|you)\\s+(?:ever\\s+)?hear\\s+from\\s+me\\b(?!\\s+(?:before|until|till|for\\s+(?:a|the|now|this|today|tonight)|this\\s+(?:week|month|year|weekend)|on\\s+this|here|about|today|tonight|in\\s+this)\\b)|\\b(?:you\\s+)?(?:won['’]?t|will\\s+not)\\s+(?:ever\\s+)?hear\\s+from\\s+me\\s+again\\b(?!\\s+(?:until|till|before|for|this|today|tonight)\\b)|\\b(?:no\\s*one|nobody|no-one)\\s+(?:can|could|will|is\\s+going\\s+to|['’]s\\s+going\\s+to)\\s+(?:talk\\s+me\\s+out\\s+of\\s+(?:it|this)|stop\\s+me\\s+(?:this\\s+time|anymore|any\\s+longer|from\\s+(?:doing\\s+it|ending\\s+it|going\\s+through\\s+with\\s+it)))|\\b(?:about\\s+to|going\\s+to|gonna|close\\s+to)\\s+(?:do|doing)\\s+something\\s+(?:that\\s+)?i\\s+(?:can['’]?t|cant|cannot|can\\s+never|won['’]?t\\s+(?:ever\\s+)?be\\s+able\\s+to)\\s+(?:take\\s+back|undo|come\\s+back\\s+from)\\b|\\b(?:won['’]?t|will\\s+not|never)\\s+(?:have\\s+to\\s+)?(?:deal\\s+with|face|feel)\\s+(?:any\\s+of\\s+(?:it|this)|anything|it\\s+all)\\s+ever\\s+again\\b|\\b(?:{{IDEATE}})\\s+(?:(?:{{ABOUT}})\\s+)?(?:exactly\\s+)?how\\s+(?:i['’]?d|i\\s+would|i['’]?ll|i\\s+will|i['’]?m\\s+going\\s+to|i\\s+could)\\s+do\\s+it\\b",
+      "flags": "i",
+      "note": "Final-sounding statements that are alarming without any crisis word: \"this is the last time you'll hear from me\", \"nobody can talk me out of it\", \"about to do something I can't take back\", planning how I'd do it. Concern on their own; si_active.vague_act_in_context raises the vague ones to crisis in context.",
+      "sources": [
+        "nimh-warning-signs"
+      ],
+      "relation": "informed-by"
+    },
+    {
+      "id": "distress.negated_state",
+      "category": "acute_distress",
+      "level": "concern",
+      "pattern": "{{SELF}}\\s+(?:not|never)\\s+(?:(?:really|actually|even|currently)\\s+)?((?:crying|sobbing|weeping|overwhelmed|having\\s+a\\s+(?:breakdown|meltdown|panic\\s+attack)))\\b|\\bno\\s+((?:melt\\s?downs?|break\\s?downs?|panic\\s+attacks?|freak\\s?-?\\s?outs?|tears|crying))\\s+(?:here|today|tonight|yet|this\\s+(?:time|week)|lately|in\\s+(?:weeks|months|ages))\\b",
+      "flags": "i",
+      "note": "Denied distress states (\"I'm not crying\", \"no breakdown here\"). The finding exists so the denial is reported: negated acute distress resolves to none (SPEC §4 clarification).",
+      "sources": [],
+      "relation": "informed-by"
+    },
+    {
       "id": "history.past_attempt",
       "category": "history",
       "level": "concern",
@@ -1378,7 +1568,7 @@
       "id": "immediacy.plan",
       "category": "immediacy",
       "level": "none",
-      "pattern": "\\b(?:have|had|got|made|make|making|with|there['’]?s)\\s+(?:a|the|my)\\s+(?:(?:whole|full|real|concrete|detailed|specific)\\s+)?plan\\b|\\bplanned\\s+(?:it|it\\s+out|out\\s+how|how|when|where|the\\s+(?:date|day|time|method))\\b|\\bmy\\s+plan\\s+is\\b|\\bsuicide\\s+(?:plan|pact)\\b|\\bpicked\\s+(?:a|the)\\s+(?:date|day|time|place|spot)\\b|\\bknow\\s+(?:exactly\\s+)?(?:how|when|where)\\s+(?:i['’](?:ll|d|m\\s+going\\s+to|m\\s+gonna)|i\\s+(?:will|would|am\\s+going\\s+to))\\s+(?:do|end)\\s+it\\b",
+      "pattern": "\\b(?:have|had|got|made|make|making|with|there['’]?s)\\s+(?:a|the|my)\\s+(?:(?:whole|full|real|concrete|detailed|specific)\\s+)?plan\\b|\\bplanned\\s+(?:it|it\\s+out|out\\s+how|how|when|where|the\\s+(?:date|day|time|method))\\b|\\bmy\\s+plan\\s+is\\b|\\bsuicide\\s+(?:plan|pact)\\b|\\bpicked\\s+(?:out\\s+)?(?:a|the)\\s+(?:date|day|time|place|spot|location)\\b|\\bknow\\s+(?:exactly\\s+)?(?:how|when|where)\\s+(?:i['’](?:ll|d|m\\s+going\\s+to|m\\s+gonna)|i\\s+(?:will|would|am\\s+going\\s+to))\\s+(?:do|end)\\s+it\\b|\\b(?:planning|planned|plan|worked\\s+out|figured\\s+out|decided|chosen|chose)\\s+(?:exactly\\s+)?(?:how|when|where)\\s+(?:i['’]?d|i\\s+would|i['’]?ll|i\\s+will|i['’]?m\\s+going\\s+to|i\\s+am\\s+going\\s+to|to)\\s+(?:do|end)\\s+it\\b",
       "flags": "i",
       "sources": [
         "nimh-warning-signs",
@@ -1390,7 +1580,7 @@
       "id": "immediacy.means",
       "category": "immediacy",
       "level": "none",
-      "pattern": "\\b(?:have|had|got|gotten|bought|buy|buying|ordered|saving|saved|stockpil(?:e|ed|ing)|hoard(?:ed|ing)?|collect(?:ed|ing)|holding|holding\\s+onto|counted|counting|found|keeping|keep|stashed|stashing|hid|hidden|hiding|loaded|filled)\\s+(?:up\\s+)?(?:(?:(?:all|enough|a\\s+lot|plenty|most)\\s+(?:of\\s+)?)?(?:my|the|a|some|enough|these|those|extra|his|her)\\s+)?(?:(?:\\w+['’]s|old|spare|extra|leftover|dad['’]?s|mom['’]?s)\\s+)?(?:{{MEANS}}|sleeping\\s+pills)\\b|\\b(?:{{MEANS}})\\s+(?:(?:is|are|['’]s|sitting|lying|right|already)\\s+)*(?:right\\s+)?(?:here|there|ready|loaded|next\\s+to\\s+me|beside\\s+me|in\\s+front\\s+of\\s+me|with\\s+me|on\\s+(?:the|my)\\s+(?:table|desk|bed|nightstand|lap|counter)|in\\s+my\\s+(?:hand|hands|lap|pocket|bag|car|room|drawer|mouth))\\b|\\b(?:{{MEANS}})\\s+(?:saved|stashed|hidden)\\s+(?:up|away)\\b|\\bnoose\\b",
+      "pattern": "\\b(?:have|had|got|gotten|bought|buy|buying|ordered|saving|saved|stockpil(?:e|ed|ing)|hoard(?:ed|ing)?|collect(?:ed|ing)|holding|holding\\s+onto|counted|counting|found|keeping|keep|stashed|stashing|hid|hidden|hiding|loaded|filled)\\s+(?:up\\s+)?(?:(?:(?:all|enough|a\\s+lot|plenty|most)\\s+(?:of\\s+)?)?(?:my|the|a|some|enough|these|those|extra|his|her)\\s+)?(?:(?:\\w+['’]s|old|spare|extra|leftover|dad['’]?s|mom['’]?s)\\s+)?(?:{{MEANS}}|sleeping\\s+pills)\\b|\\b(?:{{MEANS}})\\s+(?:(?:is|are|['’]s|sitting|lying|right|already)\\s+)*(?:right\\s+)?(?:here|there|ready|loaded|next\\s+to\\s+me|beside\\s+me|in\\s+front\\s+of\\s+me|with\\s+me|on\\s+(?:the|my)\\s+(?:table|desk|bed|nightstand|lap|counter)|in\\s+my\\s+(?:hand|hands|lap|pocket|bag|car|room|drawer|mouth))\\b|\\b(?:{{MEANS}})\\s+(?:saved|stashed|hidden)\\s+(?:up|away)\\b|\\bnoose\\b|\\b(?:have|had|got|gotten|bought|keeping|kept|hid|hidden)\\s+(?:(?:a|one|two|three|four|five|\\d+|several|a\\s+few)\\s+(?:full|whole|unopened|new)\\s+bottles?(?=\\s*[.!?,;]|\\s*(?![\\s\\S])|\\s+of\\s+(?:my\\s+)?(?:\\w+\\s+)?(?:{{PILLS}})))",
       "flags": "i",
       "note": "Lethal means at hand (\"I've got enough of my meds saved up\", \"the gun is in my lap\"). Never a finding on its own: it raises immediacy only next to a crisis finding (SPEC §4).",
       "sources": [
@@ -1403,9 +1593,9 @@
       "id": "immediacy.preparation",
       "category": "immediacy",
       "level": "none",
-      "pattern": "\\b(?:wrote|written|writing|write|left|leaving|finished)\\s+(?:(?:a|my|the|some)\\s+)?(?:(?:suicide|goodbye|farewell|final)\\s+)?(?:notes?|letters?)\\s+(?:to|for)\\b|\\b(?:suicide|goodbye|farewell)\\s+(?:notes?|letters?)\\b|\\b(?:said|saying|say)\\s+(?:my\\s+)?(?:goodbyes?|goodbye\\s+to\\s+(?:everyone|everybody|my\\s+\\w+))\\b|\\b(?:gave|giving|give|given|got\\s+rid\\s+of|gotten\\s+rid\\s+of)\\s+(?:away\\s+)?(?:(?:all|most)\\s+(?:of\\s+)?)?my\\s+(?:\\w+\\s+)?(?:things|stuff|belongings|possessions|dog|cat|pets?|clothes|books|guitar|savings|money|furniture|plants|jewelry|games)\\b|\\b(?:made|make|making|wrote|writing|updated|updating|finished|finalized|sorted)\\s+(?:out\\s+)?(?:a|my)\\s+will\\b|\\b(?:look(?:ed|ing)?\\s+up|research(?:ed|ing)?|googl(?:ed|ing)|search(?:ed|ing)(?:\\s+for)?)\\s+(?:(?:the\\s+)?(?:best|easiest|quickest|fastest|painless|least\\s+painful)\\s+)?(?:ways?|how|methods?)\\s+to\\b|\\b(?:put|putting|getting|got)\\s+my\\s+affairs\\s+in\\s+order\\b",
+      "pattern": "\\b(?:wrote|written|writing|write|left|leaving)\\s+(?:my\\s+\\w+|everyone|everybody|each\\s+of\\s+(?:them|my\\s+\\w+)|them|her|him)\\s+(?:a\\s+)?(?:(?:goodbye|farewell|final)\\s+)?(?:notes?|letters?)\\b|\\b(?:wrote|written|writing|write|left|leaving|finished)\\s+(?:(?:a|my|the|some)\\s+)?(?:(?:suicide|goodbye|farewell|final)\\s+)?(?:notes?|letters?)\\s+(?:to|for)\\b|\\b(?:suicide|goodbye|farewell)\\s+(?:notes?|letters?)\\b|\\b(?:said|saying|say|wrote|written|writing|write|recorded|recording|typed|typing|sent|sending)\\s+(?:my\\s+|all\\s+my\\s+|everyone\\s+)?(?:goodbyes?|(?:goodbye|bye)\\s+to\\s+(?:everyone|everybody|my\\s+\\w+))\\b|\\bgoodbye\\s+(?:notes?|letters?|texts?|messages?|emails?|videos?|posts?)\\b|\\bsaid\\s+(?:everything|all|what)\\s+(?:that\\s+)?i\\s+(?:needed|wanted|had)\\s+to\\s+(?:say|tell)\\s+(?:to\\s+)?(?:the\\s+people\\s+i\\s+love|everyone|everybody|my\\s+(?:family|kids|children|parents|friends|wife|husband|partner|mom|mum|dad|sister|brother|girlfriend|boyfriend))\\b|\\b(?:gave|giving|give|given|got\\s+rid\\s+of|gotten\\s+rid\\s+of)\\s+(?:away\\s+)?(?:(?:all|most)\\s+(?:of\\s+)?)?(?:my|the)\\s+(?:\\w+\\s+)?(?:things|stuff|belongings|possessions|dog|cat|pets?|clothes|books|guitar|savings|money|furniture|plants|jewelry|games|records|vinyl|bike|car|laptop|console|art|paintings|instruments?|collection)\\b|\\b(?:made|make|making|wrote|writing|updated|updating|finished|finalized|sorted)\\s+(?:out\\s+)?(?:a|my)\\s+will\\b|\\b(?:look(?:ed|ing)?\\s+up|research(?:ed|ing)?|googl(?:ed|ing)|search(?:ed|ing)(?:\\s+for)?)\\s+(?:(?:the\\s+)?(?:best|easiest|quickest|fastest|painless|least\\s+painful)\\s+)?(?:ways?|how|methods?)\\s+to\\b|\\bread(?:ing)?\\s+up\\s+on\\s+(?:which|what|the)\\s+(?:methods?|ways?)\\b|\\b(?:put|putting|getting|got)\\s+my\\s+affairs\\s+in\\s+order\\b|\\b(?:the|my|all\\s+(?:the|my))\\s+(?:bills|debts|rent|mortgage|accounts|finances)\\s+(?:are|were|is|got)\\s+(?:all\\s+)?(?:paid|sorted|settled|taken\\s+care\\s+of|in\\s+order)\\b|\\b(?:wrote|written|writing|write)\\s+down\\s+(?:all\\s+)?(?:my|the)\\s+passwords\\b|\\bpasswords\\s+(?:are|were)\\s+(?:all\\s+)?written\\s+down\\b|\\bpaid\\s+off\\s+(?:my|all\\s+(?:my|of\\s+my))\\s+(?:debts?|credit\\s+cards?|bills|loans?)\\b|\\b(?:messages?|emails?|texts?|letters?|posts?)\\b[^.!?\\n]{0,40}?\\b(?:scheduled|set|timed)\\s+to\\s+(?:send|go\\s+out|post|be\\s+sent)\\b|\\b(?:scheduled|timed)\\s+(?:an?\\s+|the\\s+|my\\s+)?(?:messages?|emails?|texts?|posts?)\\s+(?:to|for)\\b|\\b(?:texts?|messages?|emails?)\\s+that\\s+(?:sends?|goes|go)\\s+(?:out\\s+)?(?:at|after|on|tomorrow|tonight|in)\\b|\\bdelet(?:ed|ing|e)\\s+(?:all\\s+(?:of\\s+)?)?my\\s+(?:photos|pictures|accounts?|social\\s+media|posts|profiles?)\\b",
       "flags": "i",
-      "note": "Preparation (NIMH warning signs: saying goodbye, giving things away, making a will, researching ways to die).",
+      "note": "Preparation (NIMH warning signs: saying or writing goodbyes, giving things away, making a will, settling bills and passwords, scheduled messages, researching ways to die).",
       "sources": [
         "nimh-warning-signs",
         "srl-v1.0"
@@ -1507,9 +1697,20 @@
       "id": "negated.post_denial",
       "modifier": "negated",
       "scope": "overlap",
-      "pattern": "\\b(?:{{SUICIDE}}|self[\\s-]?harm(?:ing)?|killing\\s+myself|ending\\s+my\\s+life|hurting\\s+myself|dying)\\s+(?:is|['’]s|was|has\\s+(?:never\\s+)?been)\\s*(?:n['’]?t|\\s+not|\\s+never)\\s+(?:(?:really|even|ever|honestly)\\s+)?(?:on\\s+the\\s+table|an\\s+option|something\\s+i(?:['’]?d|\\s+would|['’]?ll|\\s+will|\\s+want|\\s+think\\s+about|\\s+consider)|in\\s+the\\s+cards|a\\s+thing\\s+for\\s+me)\\b|\\b(?:{{SUICIDE}}|self[\\s-]?harm(?:ing)?|killing\\s+myself|ending\\s+my\\s+life|hurting\\s+myself)\\s+(?:is|['’]s)\\s+off\\s+the\\s+table\\b",
+      "pattern": "\\b(?:(?:wanting|trying|planning|thinking\\s+about|going|needing)\\s+to\\s+(?:die|kill\\s+myself|end\\s+(?:it(?:\\s+all)?|my\\s+life|things)|disappear(?:\\s+(?:{{PERMANENT}}))?|hurt\\s+myself)|{{SUICIDE}}|self[\\s-]?(?:harm(?:ing)?|injury)|(?:killing|offing|hurting|harming|cutting|burning|ending|unaliving|hanging|shooting|drowning|poisoning|starving)\\s+myself|overdosing|od['’]?ing|ending\\s+(?:it(?:\\s+all)?|my\\s+life|things)|taking\\s+my\\s+(?:own\\s+)?life|dying|disappearing(?:\\s+(?:{{PERMANENT}}))?|not\\s+existing)\\s+(?:is|['’]s|was|has|have|had|would\\s+be|will\\s+be)\\s*(?:n['’]?t|nt|\\s+not|\\s+never)\\s+(?:(?:really|even|ever|honestly|once|actually|exactly|remotely|been|at\\s+all)\\s+)*(?:on\\s+the\\s+table|an?\\s+(?:option|choice|possibility|issue|concern|risk|factor|plan)|in\\s+the\\s+cards|a\\s+thing\\s+for\\s+me|my\\s+(?:thing|plan|goal|intention)|the\\s+(?:plan|goal|point|issue|problem|answer|intention|case)|part\\s+of\\s+(?:it|this|the\\s+(?:picture|plan|story)|my\\s+(?:story|plan|life|picture)|who\\s+i\\s+am)|(?:crossed|entered)\\s+my\\s+mind|on\\s+my\\s+mind|in\\s+my\\s+(?:head|thoughts|plans?)|what\\s+(?:this\\s+is|it\\s+is|i['’]?m\\s+(?:after|saying|talking\\s+about|going\\s+for|feeling|describing)|i\\s+(?:want|need|mean|meant|am\\s+after|am\\s+saying))|something\\s+(?:i|i['’]?d|i['’]?ve|i['’]?ll|i['’]?m)(?:\\s+(?:would|will|have|ever|even|really|seriously|actually|considered|thought\\s+about|done|do|want|consider|think\\s+about|planning|planned))*|happening|going\\s+to\\s+happen|gonna\\s+happen|for\\s+me)\\b|\\b(?:{{SUICIDE}}|self[\\s-]?harm(?:ing)?|killing\\s+myself|ending\\s+my\\s+life|hurting\\s+myself)\\s+(?:is|['’]s)\\s+off\\s+the\\s+table\\b",
       "flags": "i",
-      "note": "A denial that follows the crisis word (\"suicide isn't on the table for me\"). Overlap scope, because the negation comes after the finding.",
+      "note": "A denial that follows the crisis wording, in a copular or nominal frame (\"wanting to die isn't what this is\", \"hurting myself has never been part of it\", \"suicide isn't on the table\", \"taking my own life has never crossed my mind\"). The predicates are a closed list of denials, so \"wanting to die isn't new for me\" is not a denial. Overlap scope, because the negation comes after the finding.",
+      "sources": [],
+      "relation": "informed-by"
+    },
+    {
+      "id": "negated.block_subordinate",
+      "modifier": "negated",
+      "scope": "between",
+      "effect": "block",
+      "pattern": "\\b(?:after|before|when|once|until|till|because|since)\\s+(?:i|i['’](?:m|ve|d|ll)|im|ive)\\b",
+      "flags": "i",
+      "note": "A negation does not reach into a later subordinate clause with its own first-person subject (\"so she's not stuck after I'm gone\").",
       "sources": [],
       "relation": "informed-by"
     },
@@ -1691,9 +1892,9 @@
       "id": "past.years_ago",
       "modifier": "past",
       "scope": "sentence",
-      "pattern": "\\b(?:(?:many|several|a\\s+few|a\\s+couple(?:\\s+of)?|some|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|\\d{1,2})\\s+)?(?:years|decades|months)\\s+ago\\b|\\ba\\s+(?:year|decade)\\s+ago\\b|\\ba\\s+long\\s+time\\s+ago\\b",
+      "pattern": "\\b(?:(?:many|several|a\\s+few|a\\s+couple(?:\\s+of)?|some|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|\\d{1,2})\\s+)?(?:years|decades|months)\\s+(?:ago|back)\\b|\\ba\\s+(?:year|decade)\\s+(?:ago|back)\\b|\\ba\\s+long\\s+time\\s+(?:ago|back)\\b|\\bway\\s+back\\b",
       "flags": "i",
-      "note": "Weeks and days ago are recent (SPEC §4 clarification) and do not set past.",
+      "note": "Years ago, years back, a long time ago. Weeks and days ago are recent (SPEC §4 clarification) and do not set past.",
       "sources": [],
       "relation": "informed-by"
     },
@@ -1701,7 +1902,7 @@
       "id": "past.back_then",
       "modifier": "past",
       "scope": "sentence",
-      "pattern": "\\bback\\s+(?:then|in\\s+(?:the\\s+day|college|high\\s+school|school|university|grad\\s+school|my\\s+\\w+|(?:19|20)\\d{2}|the\\s+(?:80s|90s|2000s|2010s)|(?:the\\s+)?(?:spring|summer|fall|autumn|winter)|january|february|march|april|may|june|july|august|september|october|november|december))\\b|\\bat\\s+the\\s+time\\b|\\bin\\s+those\\s+days\\b|\\bin\\s+the\\s+past\\b",
+      "pattern": "\\bback\\s+(?:then|in\\s+(?:the\\s+day|college|high\\s+school|school|university|grad\\s+school|my\\s+\\w+|(?:19|20)\\d{2}|the\\s+(?:80s|90s|2000s|2010s)|(?:the\\s+)?(?:spring|summer|fall|autumn|winter)|january|february|march|april|may|june|july|august|september|october|november|december))\\b|\\bback\\s+when\\b|\\bat\\s+the\\s+time\\b|\\bin\\s+those\\s+days\\b|\\bin\\s+the\\s+past\\b",
       "flags": "i",
       "sources": [],
       "relation": "informed-by"
@@ -1710,7 +1911,7 @@
       "id": "past.life_stage",
       "modifier": "past",
       "scope": "sentence",
-      "pattern": "\\bwhen\\s+i\\s+was\\s+(?:(?:a|an|in|at)\\s+)?(?:(?:little|young|small)\\s+)?(?:kid|child|teen|teenager|youngster|boy|girl|baby|younger|young|little|student|freshman|sophomore|junior|senior|undergrad|high\\s+school|college|school|university|grad\\s+school|middle\\s+school|my\\s+(?:teens|twenties|thirties|20s|30s|early\\s+\\w+|late\\s+\\w+)|\\d{1,2}|(?:thir|four|fif|six|seven|eigh|nine)teen|ten|eleven|twelve|twenty(?:[\\s-]\\w+)?|thirty(?:[\\s-]\\w+)?|forty(?:[\\s-]\\w+)?)\\b|\\bas\\s+a\\s+(?:kid|child|teen|teenager|young\\s+(?:adult|man|woman)|student|freshman)\\b|\\bin\\s+my\\s+(?:teens|twenties|thirties|forties|fifties|20s|30s|40s|50s|(?:early|late)\\s+(?:teens|twenties|thirties|20s|30s)|youth|childhood|teenage\\s+years)\\b|\\bin\\s+(?:middle|high)\\s+school\\b|\\bat\\s+(?:age\\s+\\d{1,2}|(?:thir|four|fif|six|seven|eigh|nine)teen|1[3-9](?![:.]\\d)|twenty(?:[\\s-](?:one|two|three|four|five))?)\\b",
+      "pattern": "\\bwhen\\s+i\\s+was\\s+(?:(?:a|an|in|at)\\s+)?(?:(?:little|young|small)\\s+)?(?:kid|child|teen|teenager|youngster|boy|girl|baby|younger|young|little|student|freshman|sophomore|junior|senior|undergrad|high\\s+school|college|school|university|grad\\s+school|middle\\s+school|my\\s+(?:teens|twenties|thirties|20s|30s|early\\s+\\w+|late\\s+\\w+)|\\d{1,2}|(?:thir|four|fif|six|seven|eigh|nine)teen|ten|eleven|twelve|twenty(?:[\\s-]\\w+)?|thirty(?:[\\s-]\\w+)?|forty(?:[\\s-]\\w+)?)\\b|\\bas\\s+a\\s+(?:kid|child|teen|teenager|young\\s+(?:adult|man|woman)|student|freshman)\\b|\\b(?:in|from)\\s+my\\s+(?:teens|twenties|thirties|forties|fifties|20s|30s|40s|50s|(?:early|late)\\s+(?:teens|twenties|thirties|20s|30s)|youth|childhood|teenage\\s+years)\\b|\\bin\\s+(?:middle|high)\\s+school\\b|\\bat\\s+(?:age\\s+\\d{1,2}|(?:thir|four|fif|six|seven|eigh|nine)teen|1[3-9](?![:.]\\d)|twenty(?:[\\s-](?:one|two|three|four|five))?)\\b",
       "flags": "i",
       "note": "\"When I was <age or life stage>\", \"at sixteen\". \"When I was alone\" is not an anchor. Present tense in the clause (\"I'm in high school and...\") cancels past.",
       "sources": [],
@@ -1767,7 +1968,7 @@
       "id": "past.life_event",
       "modifier": "past",
       "scope": "sentence",
-      "pattern": "\\bwhen\\s+(?:i|we)\\s+(?:first\\s+)?(?:started|moved|lost\\s+(?:the|our|my)\\s+(?:baby|pregnancy|house|home|business|job)|got\\s+(?:divorced|married|laid\\s+off|fired|sober|clean|diagnosed)|went\\s+through|left\\s+(?:home|school|college|the\\s+military|the\\s+army)|graduated|retired|was\\s+deployed|came\\s+out|broke\\s+up|split\\s+up)\\b|\\bbefore\\s+i\\s+(?:got|found|started|began|went\\s+to)\\s+(?:help|treatment|therapy|meds|medication|sober|clean|better|rehab)\\b",
+      "pattern": "\\bwhen\\s+(?:i|we)\\s+(?:first\\s+)?(?:started|moved|lost\\s+(?:the|our|my)\\s+(?:baby|pregnancy|house|home|business|job)|got\\s+(?:divorced|married|laid\\s+off|fired|sober|clean|diagnosed)|went\\s+through|left\\s+(?:home|school|college|the\\s+military|the\\s+army)|graduated|retired|was\\s+deployed|came\\s+out|broke\\s+up|split\\s+up)\\b|\\bbefore\\s+i\\s+(?:got|found|started|began|went\\s+to)\\s+(?:help|treatment|therapy|meds|medication|sober|clean|better|rehab)\\b|\\bbefore\\s+(?:treatment|therapy|meds|medication|rehab|recovery|my\\s+diagnosis|i\\s+was\\s+diagnosed|getting\\s+(?:help|treatment|sober|clean|diagnosed))\\b",
       "flags": "i",
       "sources": [],
       "relation": "informed-by"
@@ -1832,6 +2033,26 @@
       "relation": "informed-by"
     },
     {
+      "id": "past.prior_event",
+      "modifier": "past",
+      "scope": "overlap",
+      "pattern": "\\b(?:my|a|the|his|her|their)\\s+(?:past|previous|prior|earlier|old|former)\\s+(?:(?:suicide\\s+)?attempts?|overdoses?|ods|hospitali[sz]ations?|admissions?|self[\\s-]?harm(?:ing)?|episodes?|cutting)\\b",
+      "flags": "i",
+      "note": "A prior event named as such (\"my past overdose\", \"a previous attempt\"). Overlap scope: it marks only the event it names.",
+      "sources": [],
+      "relation": "informed-by"
+    },
+    {
+      "id": "past.stopped_since",
+      "modifier": "past",
+      "scope": "sentence-or-next",
+      "pattern": "\\bsince\\s+(?:starting|i\\s+started|beginning|i\\s+began|going\\s+on|i\\s+went\\s+on|being\\s+on|getting\\s+on)\\s+(?:the\\s+|my\\s+)?(?:[a-z-]+\\s+){0,2}?[a-z-]+\\b[^.!?\\n]{0,60}?\\b(?:stopped|gone\\s+away|went\\s+away|disappeared|faded|eased|lifted|haven['’]?t\\s+had|have\\s+not\\s+had|no\\s+longer)\\b|\\b(?:they|the\\s+(?:thoughts|urges|feelings)|it)\\s*(?:['’]ve|\\s+have|['’]s|\\s+has)\\s+(?:(?:completely|totally|mostly|basically|pretty\\s+much|all\\s+but)\\s+)?(?:stopped|gone\\s+away|disappeared|faded|lifted|ended)\\b",
+      "flags": "i",
+      "note": "Thoughts or urges that stopped (\"since starting meds they've stopped completely\", \"since starting lithium I haven't had any\"). This places them in the past; the same wording also sets resolved (resolved.stopped_since).",
+      "sources": [],
+      "relation": "informed-by"
+    },
+    {
       "id": "past.block_recent",
       "modifier": "past",
       "scope": "clause",
@@ -1875,7 +2096,7 @@
       "id": "resolved.doing_better",
       "modifier": "resolved",
       "scope": "sentence-or-next",
-      "pattern": "\\b(?:i['’]?m|im|i\\s+am|i['’]?ve\\s+been|ive\\s+been|i\\s+have\\s+been)\\s+(?:doing\\s+|feeling\\s+)?(?:(?:a\\s+lot|much|way|so\\s+much|far|a\\s+little|a\\s+bit)\\s+)?(?:better|okay|ok|fine|good|alright|all\\s+right|stable|well|happy|happier|great|content|at\\s+peace|healthy|healthier)\\s+(?:now|these\\s+days|today|since|for\\s+(?:a\\s+while|years|months|a\\s+long\\s+time|\\w+\\s+(?:years|months)))\\b|\\b(?:i['’]?m|im|i\\s+am|and|now|been)\\s+(?:(?:a\\s+lot|much|way|so\\s+much|far|really|pretty)\\s+)?doing\\s+(?:(?:a\\s+lot|much|way|so\\s+much|far|really|pretty)\\s+)?(?:better|fine|okay|ok|well|alright|all\\s+right|good|great)\\b|\\b(?:these\\s+days|nowadays|now|today)\\s*,?\\s+(?:i['’]?m|im|i\\s+am|i\\s+(?:mostly\\s+|just\\s+|really\\s+)?feel|things\\s+are|life\\s+is|it['’]?s)\\s+(?:(?:mostly|much|a\\s+lot|so\\s+much|really|pretty|way)\\s+)?(?:better|okay|ok|fine|good|great|grateful|at\\s+peace|happy|happier|content|stable|calm|calmer|well|lighter|alright)\\b",
+      "pattern": "\\b(?:i['’]?m|im|i\\s+am|i['’]?ve\\s+been|ive\\s+been|i\\s+have\\s+been)\\s+(?:doing\\s+|feeling\\s+)?(?:(?:a\\s+lot|much|way|so\\s+much|far|a\\s+little|a\\s+bit)\\s+)?(?:better|okay|ok|fine|good|alright|all\\s+right|stable|well|happy|happier|great|content|at\\s+peace|healthy|healthier)\\s+(?:now|these\\s+days|today|since|for\\s+(?:a\\s+while|years|months|a\\s+long\\s+time|\\w+\\s+(?:years|months)))\\b|\\b(?:i['’]?m|im|i\\s+am|and|now|been)\\s+(?:(?:a\\s+lot|much|way|so\\s+much|far|really|pretty)\\s+)?doing\\s+(?:(?:a\\s+lot|much|way|so\\s+much|far|really|pretty)\\s+)?(?:better|fine|okay|ok|well|alright|all\\s+right|good|great)\\b|\\b(?:these\\s+days|nowadays|now|today)\\s*,?\\s+(?:i['’]?m|im|i\\s+am|i\\s+(?:mostly\\s+|just\\s+|really\\s+)?feel|things\\s+are|life\\s+is|it['’]?s)\\s+(?:(?:mostly|much|a\\s+lot|so\\s+much|really|pretty|way)\\s+)?(?:better|okay|ok|fine|good|great|grateful|at\\s+peace|happy|happier|content|stable|calm|calmer|well|lighter|alright)\\b|\\b(?:things|life|it|everything|i)\\s+(?:are|is|['’]s|am|['’]m|feel|feels|have\\s+been|has\\s+been)\\s+(?:(?:so|much|a\\s+lot|way|far|really|pretty)\\s+)?(?:steadier|calmer|better|more\\s+stable|stable|easier|good|okay|fine|settled|under\\s+control)\\s+(?:now|these\\s+days|nowadays)\\b",
       "flags": "i",
       "sources": [],
       "relation": "informed-by"
@@ -1893,7 +2114,7 @@
       "id": "resolved.clean_stable",
       "modifier": "resolved",
       "scope": "sentence-or-next",
-      "pattern": "\\b(?:been|i['’]?m|stayed)\\s+(?:clean|sober|stable|safe|well)\\s+(?:for|since)\\b|\\bhaven['’]?t\\s+(?:done\\s+(?:it|that)|cut|self[\\s-]?harmed|hurt\\s+myself|relapsed|felt\\s+(?:that|like\\s+that))\\s+(?:in|for|since)\\b",
+      "pattern": "\\b(?:been|i['’]?m|stayed)\\s+(?:clean|sober|stable|safe|well)\\s+(?:for|since)\\b|\\bhaven['’]?t\\s+(?:done\\s+(?:it|that)|cut|self[\\s-]?harmed|hurt\\s+myself|relapsed|felt\\s+(?:that|like\\s+that))\\s+(?:in|for|since)\\b|\\b(?:clean|sober|clean\\s+and\\s+sober|sober\\s+and\\s+clean|stable|well)\\s+(?:for\\s+)?(?:(?:over|almost|nearly|about)\\s+)?(?:\\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten|several|many)\\s+(?:years?|months?)\\b",
       "flags": "i",
       "sources": [],
       "relation": "informed-by"
@@ -1923,6 +2144,26 @@
       "pattern": "\\b(?:don['’]?t|dont|do\\s+not|no\\s+longer)\\s+(?:do|feel|think)\\s+(?:that|it|like\\s+that|that\\s+way)\\s+(?:anymore|any\\s*more|any\\s+longer|now)\\b|\\bno\\s+longer\\s+(?:do|feel|think|want)\\s+(?:that|it|like\\s+that|that\\s+way|to\\s+die)\\b|(?:^|(?<=[.!?\\n]\\s)|(?<=[.!?\\n])|(?<=,\\s)|(?<=\\bbut\\s))not\\s+(?:anymore|any\\s*more)\\b|\\bi\\s+stopped\\s+(?:cutting|self[\\s-]?harming|hurting\\s+myself|doing\\s+(?:it|that)|burning\\s+myself)\\b|\\bin\\s+remission\\b",
       "flags": "i",
       "note": "\"I don't do that anymore\", a standalone \"not anymore\", \"I stopped cutting\", \"in remission\".",
+      "sources": [],
+      "relation": "informed-by"
+    },
+    {
+      "id": "resolved.stopped_since",
+      "modifier": "resolved",
+      "scope": "sentence-or-next",
+      "pattern": "\\bsince\\s+(?:starting|i\\s+started|beginning|i\\s+began|going\\s+on|i\\s+went\\s+on|being\\s+on|getting\\s+on)\\s+(?:the\\s+|my\\s+)?(?:[a-z-]+\\s+){0,2}?[a-z-]+\\b[^.!?\\n]{0,60}?\\b(?:stopped|gone\\s+away|went\\s+away|disappeared|faded|eased|lifted|haven['’]?t\\s+had|have\\s+not\\s+had|no\\s+longer)\\b|\\b(?:they|the\\s+(?:thoughts|urges|feelings)|it)\\s*(?:['’]ve|\\s+have|['’]s|\\s+has)\\s+(?:(?:completely|totally|mostly|basically|pretty\\s+much|all\\s+but)\\s+)?(?:stopped|gone\\s+away|disappeared|faded|lifted|ended)\\b",
+      "flags": "i",
+      "note": "Thoughts or urges that stopped since treatment began (see past.stopped_since, which has the same wording).",
+      "sources": [],
+      "relation": "informed-by"
+    },
+    {
+      "id": "resolved.not_current",
+      "modifier": "resolved",
+      "scope": "sentence-or-next",
+      "pattern": "\\b(?:it['’]?s|that['’]?s|it\\s+is|that\\s+is|this\\s+is|which\\s+is)\\s+(?:not|no\\s+longer)\\s+(?:a\\s+|an\\s+)?(?:current|active|ongoing|present)\\s+(?:issue|problem|thing|concern|risk)\\b|\\bno\\s+(?:recurrence|relapses?|further\\s+(?:attempts|episodes))\\b|\\b(?:haven['’]?t|have\\s+not|never)\\s+relapsed\\b|\\b(?:that|this)\\s+chapter\\s+is\\s+(?:closed|over|behind\\s+me)\\b",
+      "flags": "i",
+      "note": "Clinical and plain statements that a past problem is not current (\"it's not a current issue\", \"no recurrence\", \"haven't relapsed\").",
       "sources": [],
       "relation": "informed-by"
     },
@@ -2147,6 +2388,59 @@
       "pattern": "\\b(?:want(?:ed)?|wish(?:ed)?)\\s+(?:for\\s+)?(?:the\\s+)?(?:floor|ground|earth)\\s+to\\s+(?:swallow|open\\s+up)|\\b(?:wanted|want)\\s+to\\s+(?:just\\s+)?(?:disappear|vanish|die|sink\\s+into\\s+the\\s+floor)\\s+(?:right\\s+there|on\\s+the\\s+spot|then\\s+and\\s+there|from\\s+embarrassment|of\\s+embarrassment)\\b|\\bjump\\s+off\\s+(?:a|the)\\s+(?:bridge|cliff)\\s+(?:for|if)\\b",
       "flags": "i",
       "note": "Embarrassment and loyalty idioms (\"wanted the floor to swallow me\", \"would jump off a bridge for you\").",
+      "sources": [],
+      "relation": "informed-by"
+    },
+    {
+      "id": "idiom.hill_to_die_on",
+      "modifier": "idiom",
+      "pattern": "\\b(?:the\\s+)?hill\\s+(?:that\\s+)?(?:i['’]?ll|i\\s+will|i['’]?d|i\\s+would|i['’]?m\\s+(?:going\\s+to|gonna|willing\\s+to|ready\\s+to)|i\\s+am\\s+(?:going\\s+to|willing\\s+to))\\s+die\\s+on\\b|\\bdie\\s+on\\s+(?:this|that|the\\s+same)\\s+hill\\b|\\bhill\\s+to\\s+die\\s+on\\b",
+      "flags": "i",
+      "note": "A strongly held opinion (\"this is the hill I'll die on\").",
+      "sources": [],
+      "relation": "informed-by"
+    },
+    {
+      "id": "idiom.deceased",
+      "modifier": "idiom",
+      "pattern": "\\b(?:i['’]?m|im|i\\s+am|i\\s+was|we['’]?re|we\\s+were)\\s+(?:(?:so|literally|actually|lowkey|deadass|completely|officially|just|now)\\s+)*deceased\\b|\\bhad\\s+(?:me|us|him|her|them|everyone|everybody|the\\s+(?:whole\\s+)?(?:room|crowd|audience|class|table|office|team|chat|group\\s+chat))\\s+(?:(?:literally|absolutely|just|so)\\s+)?(?:dying|dead|deceased|on\\s+the\\s+floor)\\b(?!\\s+inside\\b)",
+      "flags": "i",
+      "note": "Laughter slang: \"I was deceased\", \"had the whole room dying\".",
+      "sources": [],
+      "relation": "informed-by"
+    },
+    {
+      "id": "idiom.nuisance_cant_take",
+      "modifier": "idiom",
+      "categories": [
+        "acute_distress"
+      ],
+      "pattern": "(?:{{CANT}})\\s+(?:take|stand|handle|bear|deal\\s+with)\\s+(?:it|this|that|any\\s+more\\s+of\\s+(?:it|this))(?:\\s+(?:anymore|any\\s*more|any\\s+longer))?[^.!?\\n]{0,80}?\\b(?:{{NUISANCE}})\\b|\\b(?:{{NUISANCE}})\\b[^.!?\\n]{0,80}?(?:{{CANT}})\\s+(?:take|stand|handle|bear|deal\\s+with)\\s+(?:it|this|that)\\b",
+      "flags": "i",
+      "note": "Everyday frustration: \"I can't take it anymore\" about traffic, the heating or the printer, in the same sentence. Restricted to acute distress, so crisis language in the same sentence is unaffected.",
+      "sources": [],
+      "relation": "informed-by"
+    },
+    {
+      "id": "idiom.nuisance_kill_me",
+      "modifier": "idiom",
+      "pattern": "\\bkill\\s+me\\b(?:\\s+now)?[^.!?\\n]{0,80}?\\b(?:{{NUISANCE}})\\b|\\b(?:{{NUISANCE}})\\b[^.!?\\n]{0,80}?\\bkill\\s+me\\b",
+      "flags": "i",
+      "note": "\"Kill me\" about an everyday nuisance in the same sentence (\"Kill me, I have three more hours of this webinar\").",
+      "sources": [],
+      "relation": "informed-by"
+    },
+    {
+      "id": "idiom.block_inner_experience",
+      "modifier": "idiom",
+      "scope": "sentence",
+      "effect": "block",
+      "categories": [
+        "acute_distress"
+      ],
+      "pattern": "\\b(?:voices?|(?:in|inside)\\s+my\\s+(?:head|mind|brain)|my\\s+(?:own\\s+)?thoughts)\\b",
+      "flags": "i",
+      "note": "Voices or noise \"in my head\" are not an everyday nuisance: an acute-distress finding in the same segment is not read as an idiom (\"I can't take it anymore, the noise in my head won't stop\").",
       "sources": [],
       "relation": "informed-by"
     },

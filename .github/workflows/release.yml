@@ -5,11 +5,12 @@ name: Release
 #   chunker-v<version>        -> @meddevkit/chunker        (packages/chunker)
 #   adapter-azure-v<version>  -> @meddevkit/adapter-azure  (packages/adapter-azure)
 #   crisis-signals-v<version>  -> @meddevkit/crisis-signals  (packages/crisis-signals)
+#   crisis-adapter-nope-v<version>  -> @meddevkit/crisis-adapter-nope  (packages/crisis-adapter-nope)
 # or run manually from main and pick the package.
 
 on:
   push:
-    tags: ['chunker-v*', 'adapter-azure-v*', 'crisis-signals-v*']
+    tags: ['chunker-v*', 'adapter-azure-v*', 'crisis-signals-v*', 'crisis-adapter-nope-v*']
   workflow_dispatch:
     inputs:
       package:
@@ -20,6 +21,7 @@ on:
           - chunker
           - adapter-azure
           - crisis-signals
+          - crisis-adapter-nope
 
 permissions:
   contents: read
@@ -35,7 +37,8 @@ jobs:
       github.ref == 'refs/heads/main' ||
       startsWith(github.ref, 'refs/tags/chunker-v') ||
       startsWith(github.ref, 'refs/tags/adapter-azure-v') ||
-      startsWith(github.ref, 'refs/tags/crisis-signals-v')
+      startsWith(github.ref, 'refs/tags/crisis-signals-v') ||
+      startsWith(github.ref, 'refs/tags/crisis-adapter-nope-v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,6 +57,7 @@ jobs:
             chunker) PKG_DIR=packages/chunker; PKG_NAME=@meddevkit/chunker ;;
             adapter-azure) PKG_DIR=packages/adapter-azure; PKG_NAME=@meddevkit/adapter-azure ;;
             crisis-signals) PKG_DIR=packages/crisis-signals; PKG_NAME=@meddevkit/crisis-signals ;;
+            crisis-adapter-nope) PKG_DIR=packages/crisis-adapter-nope; PKG_NAME=@meddevkit/crisis-adapter-nope ;;
             *) echo "::error::Unknown package '$PREFIX'"; exit 1 ;;
           esac
           {
@@ -92,7 +96,8 @@ jobs:
         if: steps.version.outputs.skip != 'true'
         run: pnpm lint && pnpm typecheck && pnpm test
 
-      # The "..." suffix also builds workspace dependencies first (chunker before adapter-azure)
+      # The "..." suffix also builds workspace dependencies first (chunker before adapter-azure,
+      # crisis-signals before crisis-adapter-nope)
       - name: Build
         if: steps.version.outputs.skip != 'true'
         run: pnpm -r --filter "$PKG_NAME..." build

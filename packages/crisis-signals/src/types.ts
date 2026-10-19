@@ -109,6 +109,45 @@ export interface PatternEntry {
   sources: string[];
   /** How the pattern relates to its sources. */
   relation: SourceRelation;
+  /**
+   * Makes the pattern context-gated: a match yields a finding only when the
+   * context is present nearby (see {@link PatternContext}). Used for vague or
+   * anaphoric wording ("I'm going to finish it", "for when they find me") that
+   * is crisis language only next to crisis language, lethal means or
+   * preparation.
+   */
+  context?: PatternContext;
+}
+
+/**
+ * Where a context-gated pattern looks for its context:
+ * - `sentence`: the sentence of the match.
+ * - `adjacent`: the sentence of the match, the one before it, or the one after it.
+ */
+export type ContextScope = 'sentence' | 'adjacent';
+
+/**
+ * The context a context-gated pattern needs (README, "Context-gated
+ * patterns"). The gate holds when, within `scope`, at least one of these is
+ * present and does not overlap the match itself:
+ * - a finding of an ungated detection pattern whose category is in
+ *   `categories`, or of a pattern (detection or immediacy) whose id is in
+ *   `rules`, that is not negated and not suppressed as an idiom; or
+ * - a match of `pattern`.
+ * Context comes only from ungated patterns, so gates never depend on each
+ * other.
+ */
+export interface PatternContext {
+  /** Where to look. */
+  scope: ContextScope;
+  /** Categories of ungated detection findings that count as context. */
+  categories?: CrisisCategory[];
+  /** Ids of ungated detection or immediacy patterns whose findings count as context. */
+  rules?: string[];
+  /** Regex source (portable subset, no capturing groups; may use `{{fragment}}` references) whose matches count as context. */
+  pattern?: string;
+  /** Regex flags for `pattern`; only a whole-pattern `i` is allowed. */
+  flags?: string;
 }
 
 /**
