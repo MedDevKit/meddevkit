@@ -61,7 +61,6 @@ export default function ComparisonPanel({
     brokenByChunk.set(bp.chunkIndex, list);
   }
 
-  const chunkDiff = naiveResult.totalChunks - result.metadata.totalChunks;
   const uniqueBroken = new Set(brokenPatterns.map((bp) => bp.originalText)).size;
 
   // Total text length for position bars
@@ -75,16 +74,6 @@ export default function ComparisonPanel({
       {/* Summary row */}
       <div className="px-4 py-2.5 border-b border-slate-200 bg-slate-50">
         <div className="flex items-center justify-center gap-6 text-xs">
-          <span className="text-slate-500">
-            <span className="font-semibold text-orange-600">{naiveResult.totalChunks}</span>
-            {' vs '}
-            <span className="font-semibold text-emerald-600">{result.metadata.totalChunks}</span>
-            {' chunks'}
-            {chunkDiff > 0 && (
-              <span className="text-orange-500 ml-1">(+{chunkDiff} generic)</span>
-            )}
-          </span>
-          <span className="text-slate-300">|</span>
           <span className="text-slate-500">
             <span className="font-semibold text-orange-600">{uniqueBroken}</span>
             {' broken pattern'}{uniqueBroken !== 1 ? 's' : ''}
@@ -164,8 +153,10 @@ export default function ComparisonPanel({
           <div className="flex-1 overflow-auto p-3 space-y-3 panel-scroll bg-emerald-50/30">
             {result.chunks.map((chunk, i) => {
               const section = chunk.metadata.section;
-              const sectionType = section?.type ?? 'unknown';
-              const sectionColor = SECTION_COLORS[sectionType] || SECTION_COLORS.unknown;
+              const sectionType = section?.type;
+              const sectionColor = sectionType
+                ? SECTION_COLORS[sectionType] || SECTION_COLORS.unknown
+                : undefined;
               const vitalsCount = chunk.metadata.vitals?.length ?? 0;
               const negationsCount = chunk.metadata.negations?.length ?? 0;
               const phiCount = chunk.phiMarkers.length;
@@ -178,11 +169,13 @@ export default function ComparisonPanel({
                   <div className="flex items-center justify-between px-3 py-2 border-b border-emerald-100 bg-emerald-50">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-emerald-400">#{i + 1}</span>
-                      <span
-                        className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${sectionColor}`}
-                      >
-                        {formatSection(sectionType)}
-                      </span>
+                      {sectionType && (
+                        <span
+                          className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${sectionColor}`}
+                        >
+                          {formatSection(sectionType)}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-[10px] text-emerald-400">
                       <span className="font-mono">{chunk.metadata.tokenCount} tok</span>
