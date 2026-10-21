@@ -1,6 +1,6 @@
 {
   "name": "@meddevkit/crisis-adapter-nope",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Opt-in second opinion for @meddevkit/crisis-signals from a self-hosted nope-edge model on any OpenAI-compatible server (fetch-only; unreviewed; never the only safeguard)",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

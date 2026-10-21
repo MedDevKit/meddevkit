@@ -1,5 +1,12 @@
 # @meddevkit/crisis-adapter-nope
 
+## 0.1.1
+
+### Patch Changes
+
+- First release published from GitHub Actions via npm trusted publishing,
+  with provenance. No code changes.
+
 ## 0.1.0
 
 ### Minor Changes
