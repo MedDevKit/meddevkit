@@ -25,7 +25,7 @@ export interface MedicalChunkerConfig {
    * PHI detection mode
    * - 'none': No PHI detection
    * - 'basic': Flag common PHI patterns (names, dates, MRN)
-   * - 'enhanced': More comprehensive detection (requires cloud mode)
+   * - 'enhanced': Reserved; currently falls back to 'basic'
    * @default 'basic'
    */
   phiDetection?: 'none' | 'basic' | 'enhanced';

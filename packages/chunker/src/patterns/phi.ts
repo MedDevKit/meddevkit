@@ -169,7 +169,7 @@ const PHI_CONFIDENCE: Record<PhiType, number> = {
  *
  * @remarks
  * This is basic PHI flagging only. For HIPAA-compliant de-identification,
- * use a certified solution or MedDevKit Cloud.
+ * use a dedicated, validated de-identification solution.
  */
 export function detectPhi(
   text: string,
@@ -177,7 +177,7 @@ export function detectPhi(
 ): PhiMarker[] {
   if (mode === 'enhanced') {
     console.warn(
-      '[MedDevKit] Enhanced PHI detection requires MedDevKit Cloud. Falling back to basic detection.'
+      '[MedDevKit] Enhanced PHI detection is not available in this package; using basic detection.'
     );
   }
 

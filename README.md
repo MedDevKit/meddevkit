@@ -2,12 +2,12 @@
 
 **[Live demo →](https://meddevkit.github.io/meddevkit/)** Paste a clinical note and compare MedDevKit's chunks with a generic chunker side by side.
 
-MedDevKit is an open-source medical NLP toolkit that provides PHI-aware text chunking for RAG applications, real-time detection of vital signs, clinical sections, negations, and protected health information (PHI) in clinical documentation. Designed for healthcare AI applications with ~50ms latency and no network calls, it enables safe processing of medical text while preserving clinical context boundaries.
+MedDevKit is an open-source medical NLP toolkit that provides PHI-aware text chunking for RAG applications, with local, pattern-based detection of vital signs, clinical sections, negations, and potential protected health information (PHI) in clinical notes. The chunker makes no network calls and takes under 2 ms to chunk a 4K-character synthetic note on an Apple M4 Max laptop (median about 1.3 ms; reproduce with `pnpm --filter @meddevkit/chunker bench`). When it splits text, it avoids cutting inside vital signs and medication mentions and prefers clinical section boundaries.
 
 ## Why MedDevKit?
 
 Generic RAG chunkers fail on medical text:
-- They split vital signs: `"BP: 120"` | `"/80 mmHg"`
+- They split vital signs from their labels or units: `"BP:"` | `"120/80 mmHg"`
 - They ignore clinical sections
 - They miss PHI risks
 
@@ -183,7 +183,7 @@ const result = chunker.chunk('Patient taking aspirin 81 mg daily.');
 // result.chunks[0].metadata.pluginPatterns: { '@myorg/medication-plugin': [...] }
 ```
 
-Plugins can be published to npm as `@meddevkit/plugin-*` packages for community sharing.
+A plugin is a plain object, so you can ship one in your own npm package.
 
 **Plugin Lifecycle Hooks:**
 - `onRegister` — Called when plugin is registered
@@ -233,7 +233,7 @@ Try it in the [live demo](https://meddevkit.github.io/meddevkit/)'s **Analyzer**
 ```typescript
 interface MedicalChunkerConfig {
   preserveVitals?: boolean;      // Default: true
-  phiDetection?: 'none' | 'basic' | 'enhanced';  // Default: 'basic'
+  phiDetection?: 'none' | 'basic' | 'enhanced';  // Default: 'basic' ('enhanced' currently falls back to 'basic')
   maxTokens?: number;            // Default: 512
   minTokens?: number;            // Default: 50
   overlapTokens?: number;        // Default: 50
@@ -326,17 +326,9 @@ Offsets in `phiMarkers` and `metadata` (vitals, negations, medications,
 temporal, severity, plugin patterns) are relative to `chunk.text`, so
 `chunk.text.slice(m.startOffset, m.endOffset)` returns the matched text.
 
-## Production Ready?
+## Limitations
 
-This toolkit provides **basic patterns** ideal for demos and development.
-
-For production healthcare deployments requiring:
-- HIPAA-compliant PHI handling
-- Enhanced pattern detection (50+ patterns)
-- BAA coverage
-- Enterprise support
-
-Contact us about **MedDevKit Cloud** or consulting services.
+This toolkit provides **basic, regex-based patterns** suited to demos, prototypes and development. PHI detection is best-effort flagging, not HIPAA de-identification, and MedDevKit makes no HIPAA compliance claim. Validate it on your own data before relying on it.
 
 ## Packages
 
@@ -344,12 +336,8 @@ Contact us about **MedDevKit Cloud** or consulting services.
 |---------|-------------|--------|
 | [@meddevkit/chunker](https://github.com/MedDevKit/meddevkit/tree/main/packages/chunker) | PHI-aware medical text chunker with plugin system | Available |
 | [@meddevkit/adapter-azure](https://github.com/MedDevKit/meddevkit/tree/main/packages/adapter-azure) | Azure Text Analytics for health provider adapter | Available |
-| [@meddevkit/crisis-signals](https://github.com/MedDevKit/meddevkit/tree/main/packages/crisis-signals) | Flags first-person crisis language for human follow-up (screening, not diagnosis) | In development, unreviewed |
-| [@meddevkit/crisis-adapter-nope](https://github.com/MedDevKit/meddevkit/tree/main/packages/crisis-adapter-nope) | Opt-in second opinion for crisis-signals from a self-hosted nope-edge model (never the only safeguard) | In development, unreviewed |
-| @meddevkit/terminology | Medical term normalizer | Coming soon |
-| @meddevkit/retrieval | Cascading medical retrieval | Coming soon |
-
-Community plugins follow the `@meddevkit/plugin-*` naming convention.
+| [@meddevkit/crisis-signals](https://github.com/MedDevKit/meddevkit/tree/main/packages/crisis-signals) | Keyword-and-context screen that flags first-person crisis language for human follow-up; not a diagnostic or risk-assessment tool, will miss some expressions of risk, never the only safeguard | In development, unreviewed |
+| [@meddevkit/crisis-adapter-nope](https://github.com/MedDevKit/meddevkit/tree/main/packages/crisis-adapter-nope) | Opt-in second opinion for crisis-signals from a self-hosted nope-edge model; not a diagnostic or risk-assessment tool, never the only safeguard | In development, unreviewed |
 
 ## Development
 
@@ -373,12 +361,8 @@ pnpm dev
 
 ## Contributing
 
-We welcome contributions! Please open an issue or pull request on GitHub.
+Questions and contributions: open a GitHub issue or pull request.
 
 ## License
 
 MIT - See [LICENSE](https://github.com/MedDevKit/meddevkit/blob/main/LICENSE)
-
----
-
-Built with expertise from production healthcare AI systems. Powered by MedDevKit Context 1.0.
