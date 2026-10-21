@@ -45,3 +45,6 @@ playwright-output/
 # Vercel (preview deployments only; production is GitHub Pages)
 .vercel/
 
+# Benchmark data (downloaded by benchmarks/splitters/fetch-data.mjs; not redistributed)
+benchmarks/splitters/data/
+

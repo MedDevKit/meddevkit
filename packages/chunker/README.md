@@ -11,6 +11,8 @@ Generic RAG chunkers fail on medical text:
 - They ignore clinical sections
 - They miss PHI risks
 
+How often this happens, measured against LangChain on 207 ACI-Bench notes: [splitter benchmark](https://github.com/MedDevKit/meddevkit/tree/main/benchmarks/splitters).
+
 **MedDevKit was built for healthcare.**
 
 ## Quick Start
