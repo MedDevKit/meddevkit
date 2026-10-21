@@ -3,6 +3,26 @@
 This benchmark splits 207 ACI-Bench clinical notes with three splitters and counts how often a vital sign, medication
 mention or section header line ends up with no single chunk containing it whole.
 
+## Summary
+
+These counts cover vitals, medications and standalone section headers: 1,888 patterns across 207 notes. They leave
+out 145 lines that the section detector also matches but that are paragraphs starting with a label (for example
+"Labs: Within normal limits. White blood cell count…"); the detector over-matches these, and splitting one is ordinary
+paragraph splitting. The full tables below include them.
+
+- On the notes as written, LangChain at chunkSize 1000 and 2000 (overlap 0) broke 0 of 1,888.
+- On flattened notes (line breaks removed), LangChain at chunkSize 1000, overlap 0 broke 14: 2 vitals, 6 medications
+  and 6 headers, in 14 of 207 notes.
+- On flattened notes, MedicalChunker at maxTokens 256 with overlap turned off (`overlapTokens: 0`) broke 0 of 1,888.
+  Its chunk text was 1.00x the note text, so nothing was duplicated.
+- On flattened notes, LangChain at chunkSize 1000 with 200 overlap also broke 0, with chunk text 1.19x the note text.
+
+On well-formatted notes LangChain's default splitter does not break these patterns at chunkSize 1000 or more (at
+500 it broke 1 medication). The difference shows up when line breaks are lost, and overlap closes it at a storage
+cost. See "What this does and doesn't show" for the limits.
+
+## Setup
+
 Splitters compared:
 
 - **Demo word-boundary splitter**: a port of `demo/src/utils/naiveChunker.ts`, the "generic chunker" shown in the
@@ -11,6 +31,7 @@ Splitters compared:
   (`["\n\n", "\n", " ", ""]`). Settings: chunkSize 500, 1000, 2000 with overlap 0, and chunkSize 1000 with overlap 200.
 - **`MedicalChunker`** from `@meddevkit/chunker` (built from this repo), `new MedicalChunker({ maxTokens })` with all
   other options at their defaults (including `overlapTokens: 50` and `minTokens: 50`). Settings: maxTokens 128, 256, 512.
+  The same three sizes run again with `overlapTokens: 0`, for a like-for-like comparison with LangChain at overlap 0.
 
 Each setting runs twice: on the notes as written, and on "flattened" notes where every run of newlines is replaced by
 one space. Flattening simulates EHR exports or copy-paste that lose line breaks.
@@ -99,6 +120,9 @@ means overlap repeats text across chunks.
 | MedicalChunker, maxTokens 128 (defaults) | 2 (0.1%) | 0 (0.0%) | 0 (0.0%) | 2 (0.1%) | 2/207 | 6 | 583 | 1.31x |
 | MedicalChunker, maxTokens 256 (defaults) | 0 (0.0%) | 0 (0.0%) | 0 (0.0%) | 0 (0.0%) | 0/207 | 3 | 970 | 1.14x |
 | MedicalChunker, maxTokens 512 (defaults) | 0 (0.0%) | 0 (0.0%) | 0 (0.0%) | 0 (0.0%) | 0/207 | 2 | 1552 | 1.06x |
+| MedicalChunker, maxTokens 128, overlapTokens 0 | 3 (0.1%) | 0 (0.0%) | 0 (0.0%) | 3 (0.2%) | 3/207 | 6 | 453 | 1.00x |
+| MedicalChunker, maxTokens 256, overlapTokens 0 | 0 (0.0%) | 0 (0.0%) | 0 (0.0%) | 0 (0.0%) | 0/207 | 3 | 899.5 | 1.00x |
+| MedicalChunker, maxTokens 512, overlapTokens 0 | 0 (0.0%) | 0 (0.0%) | 0 (0.0%) | 0 (0.0%) | 0/207 | 2 | 1480 | 1.00x |
 
 | Splitter / setting | Standalone headers broken (of 1,440) | Label+prose lines broken (of 145) |
 |---|---|---|
@@ -112,6 +136,9 @@ means overlap repeats text across chunks.
 | MedicalChunker, maxTokens 128 (defaults) | 0 (0.0%) | 2 (1.4%) |
 | MedicalChunker, maxTokens 256 (defaults) | 0 (0.0%) | 0 (0.0%) |
 | MedicalChunker, maxTokens 512 (defaults) | 0 (0.0%) | 0 (0.0%) |
+| MedicalChunker, maxTokens 128, overlapTokens 0 | 0 (0.0%) | 3 (2.1%) |
+| MedicalChunker, maxTokens 256, overlapTokens 0 | 0 (0.0%) | 0 (0.0%) |
+| MedicalChunker, maxTokens 512, overlapTokens 0 | 0 (0.0%) | 0 (0.0%) |
 
 ### Flattened notes (`--flatten`)
 
@@ -127,6 +154,9 @@ means overlap repeats text across chunks.
 | MedicalChunker, maxTokens 128 (defaults) | 3 (0.1%) | 0 (0.0%) | 0 (0.0%) | 3 (0.2%) | 3/207 | 6 | 602 | 1.30x |
 | MedicalChunker, maxTokens 256 (defaults) | 1 (0.0%) | 0 (0.0%) | 0 (0.0%) | 1 (0.1%) | 1/207 | 3 | 1007.5 | 1.13x |
 | MedicalChunker, maxTokens 512 (defaults) | 0 (0.0%) | 0 (0.0%) | 0 (0.0%) | 0 (0.0%) | 0/207 | 2 | 1930 | 1.05x |
+| MedicalChunker, maxTokens 128, overlapTokens 0 | 13 (0.6%) | 0 (0.0%) | 0 (0.0%) | 13 (0.8%) | 12/207 | 6 | 466 | 1.00x |
+| MedicalChunker, maxTokens 256, overlapTokens 0 | 5 (0.2%) | 0 (0.0%) | 0 (0.0%) | 5 (0.3%) | 5/207 | 3 | 968.5 | 1.00x |
+| MedicalChunker, maxTokens 512, overlapTokens 0 | 3 (0.1%) | 0 (0.0%) | 0 (0.0%) | 3 (0.2%) | 3/207 | 2 | 1891 | 1.00x |
 
 | Splitter / setting | Standalone headers broken (of 1,440) | Label+prose lines broken (of 145) |
 |---|---|---|
@@ -140,11 +170,14 @@ means overlap repeats text across chunks.
 | MedicalChunker, maxTokens 128 (defaults) | 0 (0.0%) | 3 (2.1%) |
 | MedicalChunker, maxTokens 256 (defaults) | 0 (0.0%) | 1 (0.7%) |
 | MedicalChunker, maxTokens 512 (defaults) | 0 (0.0%) | 0 (0.0%) |
+| MedicalChunker, maxTokens 128, overlapTokens 0 | 1 (0.1%) | 12 (8.3%) |
+| MedicalChunker, maxTokens 256, overlapTokens 0 | 0 (0.0%) | 5 (3.4%) |
+| MedicalChunker, maxTokens 512, overlapTokens 0 | 0 (0.0%) | 3 (2.1%) |
 
-MedicalChunker latency per note, after two warm-up passes: median 0.74 to 0.75 ms (p95 1.14 to 1.21 ms) as written,
-and 0.30 to 0.36 ms (p95 0.50 to 0.63 ms) flattened. Expect about ±0.1 ms between runs.
+MedicalChunker latency per note, after two warm-up passes, across all six settings: median 0.70 to 0.73 ms (p95 1.05
+to 1.11 ms) as written, and 0.28 to 0.32 ms (p95 0.45 to 0.53 ms) flattened. Expect about ±0.1 ms between runs.
 
-### Summary
+### Notes on the results
 
 - **As written, LangChain does not break these patterns at normal sizes.** At chunkSize 1000 and 2000 it broke 0 of
   2,033. At 500 it broke 3, and 2 of those are paragraph lines longer than 500 characters.
@@ -157,6 +190,11 @@ and 0.30 to 0.36 ms (p95 0.50 to 0.63 ms) flattened. Expect about ±0.1 ms betwe
 - **MedicalChunker at maxTokens 256 (median 1,008 chars per chunk, the closest size match) broke 1 flattened**: a
   536-char prose line, cut at a sentence boundary. It broke 0 vitals, 0 meds and 0 standalone headers at every size,
   in both modes.
+- **With overlap off, MedicalChunker breaks more prose lines but still no vitals or meds.** Flattened, at
+  `overlapTokens: 0` it broke 13 at maxTokens 128, 5 at 256 and 3 at 512, at 1.00x text. All are label+prose lines
+  except one at 128: `Constitutional: Reports chills. Denies fever` (D2N206), a review-of-systems line that the
+  "5 words or fewer, no terminal period" rule counts as a standalone header. As written, overlap off broke 3 at 128
+  and 0 at 256 and 512, all label+prose lines.
 - **LangChain 1000 with overlap 200 broke 0 flattened**, at the cost of 1.19x the note text in chunks.
 - **The demo word-boundary splitter** breaks about 2% of patterns at 128 tokens in both modes, because it never looks at
   newlines.
@@ -200,24 +238,27 @@ Flattened, MedicalChunker maxTokens 256 (its only break at this size):
 - **Overlap also fixes the flattened case.** LangChain at 1000/200 broke 0 flattened patterns. The cost is duplicated
   text: 1.19x the note text in chunks, which means more embedding and storage and repeated retrieval hits. The
   fragment of a pattern at the end of the previous chunk still exists as a partial copy; this test does not count it.
-  MedicalChunker also uses overlap by default (50 tokens), at 1.05x to 1.31x.
+  MedicalChunker also uses overlap by default (50 tokens), at 1.05x to 1.31x. The `overlapTokens: 0` rows show it
+  without that help.
 - **Patterns are only what MedDevKit's own detectors find.** Detector misses are not counted for any splitter.
   MedicalChunker protects exactly what these detectors find, so the setup favours it by construction. The detectors
-  also over-match sections: 145 of 1,585 section lines are label+prose paragraphs, and all of MedicalChunker's breaks
-  are in those.
+  also over-match sections: 145 of 1,585 section lines are label+prose paragraphs. All but one of MedicalChunker's
+  breaks are in those, and the one exception (D2N206) is a prose line the header rule misclassifies.
 - **The demo splitter is a strawman.** It ignores newlines, which is why it breaks patterns as written. Its numbers
   should not be read as "generic splitters".
 - **ACI-Bench notes are role-played.** They are written from simulated doctor-patient encounters, not real patient
   records. Real notes differ in format and noise.
 - **Characters vs tokens.** LangChain sizes are in characters; the demo splitter and MedicalChunker use estimated
-  tokens (`estimateTokens`). The settings are not perfectly matched, and MedicalChunker's chunk length includes up to
-  50 tokens of overlap. Compare rows by median chunk chars, not by the setting number. At the larger sizes most notes
-  are only 1 or 2 chunks (median note is 2,615 chars), so there are few boundaries where anything could break.
+  tokens (`estimateTokens`). The settings are not perfectly matched, and with default options MedicalChunker's chunk
+  length includes up to 50 tokens of overlap. The closest size match to LangChain 1000/0 flattened (median 995 chars)
+  is MedicalChunker 256: median 1,007.5 chars with default overlap, 968.5 with overlap off. Compare rows by median
+  chunk chars, not by the setting number. At the larger sizes most notes are only 1 or 2 chunks (median note is
+  2,615 chars), so there are few boundaries where anything could break.
 - **"Intact" is span containment only.** It does not measure whether a chunk keeps its section context, whether chunks
   are semantically coherent, or retrieval quality. MedicalChunker's other features (chunk metadata, PHI flags,
   negation) are not evaluated.
-- **Small counts, one corpus.** 207 notes. Apart from the demo splitter and flattened LangChain, the non-zero cells are
-  1 to 5 instances.
+- **Small counts, one corpus.** 207 notes. Apart from the demo splitter, flattened LangChain and flattened
+  MedicalChunker 128 with overlap off (13), the non-zero cells are 1 to 5 instances.
 - **Machine and versions.** Results above are from one machine (Apple M4 Max, Node v24.7.0) with the package versions
   listed under Results. Break counts do not depend on the machine; latency does.
 

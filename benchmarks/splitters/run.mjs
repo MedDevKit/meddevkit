@@ -11,7 +11,9 @@
  *     1.0.2, default separators), chunkSize 500 / 1000 / 2000 with overlap 0,
  *     and chunkSize 1000 with overlap 200
  *   - MedicalChunker from @meddevkit/chunker, maxTokens 128 / 256 / 512, all
- *     other options default
+ *     other options default (overlapTokens 50), and the same sizes again
+ *     with overlapTokens 0 for a like-for-like comparison with LangChain at
+ *     overlap 0
  *
  * Usage (from the repo root, after `pnpm install && pnpm build` and
  * `node benchmarks/splitters/fetch-data.mjs`):
@@ -243,11 +245,15 @@ function runNaive(text, maxTokens) {
   });
 }
 const chunkers = new Map();
-function runMdk(text, maxTokens) {
-  if (!chunkers.has(maxTokens)) chunkers.set(maxTokens, new MedicalChunker({ maxTokens }));
+/** overlapTokens undefined = library default (50). */
+function runMdk(text, maxTokens, overlapTokens) {
+  const key = `${maxTokens}/${overlapTokens ?? 'default'}`;
+  if (!chunkers.has(key)) {
+    chunkers.set(key, new MedicalChunker(overlapTokens === undefined ? { maxTokens } : { maxTokens, overlapTokens }));
+  }
   const norm = normalizeText(text);
   const t0 = performance.now();
-  const res = chunkers.get(maxTokens).chunk(text);
+  const res = chunkers.get(key).chunk(text);
   const ms = performance.now() - t0;
   return { norm, res, ms };
 }
@@ -300,6 +306,7 @@ const settings = [
   ...[500, 1000, 2000].map((s) => ({ name: `LangChain RCTS, chunkSize ${s}, overlap 0`, fam: 'lc', s, o: 0 })),
   { name: 'LangChain RCTS, chunkSize 1000, overlap 200', fam: 'lc', s: 1000, o: 200 },
   ...[128, 256, 512].map((t) => ({ name: `MedicalChunker, maxTokens ${t} (defaults)`, fam: 'mdk', t })),
+  ...[128, 256, 512].map((t) => ({ name: `MedicalChunker, maxTokens ${t}, overlapTokens 0`, fam: 'mdk', t, o: 0 })),
 ];
 
 const patsByNote = notes.map((n) => getPatterns(n));
@@ -313,7 +320,7 @@ for (const ps of patsByNote)
 const totalNoteChars = notes.reduce((n, x) => n + x.text.length, 0);
 
 // Warm up MedicalChunker (2 full passes per setting) before timing.
-for (const t of [128, 256, 512]) for (let k = 0; k < 2; k++) for (const n of notes) runMdk(n.text, t);
+for (const st of settings) if (st.fam === 'mdk') for (let k = 0; k < 2; k++) for (const n of notes) runMdk(n.text, st.t, st.o);
 
 const median = (xs) => {
   const s = [...xs].sort((a, b) => a - b);
@@ -341,7 +348,7 @@ for (const st of settings) {
     if (st.fam === 'naive') chunks = runNaive(note.text, st.t);
     else if (st.fam === 'lc') chunks = await runLangChain(note.text, st.s, st.o);
     else {
-      const { norm, res, ms } = runMdk(note.text, st.t);
+      const { norm, res, ms } = runMdk(note.text, st.t, st.o);
       latencies.push(ms);
       if (stripWs(norm) !== stripWs(note.text)) throw new Error('normalization changed non-whitespace chars');
       const nP = nonWsPrefix(norm);
