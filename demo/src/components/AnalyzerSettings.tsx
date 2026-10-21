@@ -2,7 +2,7 @@ import type { NegationPolicy } from '@meddevkit/chunker';
 import type { AnalyzerProvider, AnalyzerSettings as Settings, DemoPhiPolicy } from '../hooks/useAnalyzer';
 import SegmentedControl from './SegmentedControl';
 
-export type RecordingNotice = 'none' | 'no-match' | 'no-recordings';
+export type RecordingNotice = 'none' | 'no-match' | 'no-recordings' | 'no-preset-recording';
 
 interface AnalyzerSettingsProps {
   settings: Settings;
@@ -73,6 +73,8 @@ export default function AnalyzerSettings({
               No recordings yet — run{' '}
               <code className="font-mono">pnpm --filter @meddevkit/demo record:azure</code>.
             </>
+          ) : recordingNotice === 'no-preset-recording' ? (
+            'No recorded Azure result for this note. Choose Live or Local.'
           ) : (
             'No Azure recording for this text. Recordings exist for the sample notes; switch to Live or Local.'
           )}

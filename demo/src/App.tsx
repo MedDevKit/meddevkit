@@ -68,6 +68,12 @@ export default function App() {
     if (AZURE_RECORDINGS.length === 0) {
       recordingNotice = 'no-recordings';
     } else if (
+      text === PRESETS[activePreset].note &&
+      !hasRecordingFor(AZURE_RECORDINGS, activePreset)
+    ) {
+      // A sample note that was never recorded (e.g. ED Triage)
+      recordingNotice = 'no-preset-recording';
+    } else if (
       analyzer.run?.mode === 'recorded' &&
       analyzer.run.analysis.metadata.providers.some((p) => p.status === 'failed')
     ) {
