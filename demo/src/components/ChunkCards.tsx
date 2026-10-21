@@ -59,8 +59,10 @@ export default function ChunkCards({ result, showEntities, hideHeader }: ChunkCa
       <div className="flex-1 overflow-auto p-4 space-y-3 panel-scroll">
         {result.chunks.map((chunk, i) => {
           const section = chunk.metadata.section;
-          const sectionType = section?.type ?? 'unknown';
-          const sectionColor = SECTION_COLORS[sectionType] || SECTION_COLORS.unknown;
+          const sectionType = section?.type;
+          const sectionColor = sectionType
+            ? SECTION_COLORS[sectionType] || SECTION_COLORS.unknown
+            : undefined;
           const vitalsCount = chunk.metadata.vitals?.length ?? 0;
           const negationsCount = chunk.metadata.negations?.length ?? 0;
           const phiCount = chunk.phiMarkers.length;
@@ -76,11 +78,13 @@ export default function ChunkCards({ result, showEntities, hideHeader }: ChunkCa
               <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-slate-400">#{i + 1}</span>
-                  <span
-                    className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${sectionColor}`}
-                  >
-                    {formatSection(sectionType)}
-                  </span>
+                  {sectionType && (
+                    <span
+                      className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${sectionColor}`}
+                    >
+                      {formatSection(sectionType)}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 text-[10px] text-slate-400">
                   <span className="font-mono">{chunk.metadata.tokenCount} tok</span>
