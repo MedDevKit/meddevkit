@@ -1,0 +1,17 @@
+{
+  "name": "@meddevkit/benchmark-splitters",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Reproducible splitter comparison on ACI-Bench notes (not published)",
+  "type": "module",
+  "scripts": {
+    "fetch-data": "node fetch-data.mjs",
+    "bench": "node run.mjs",
+    "bench:flatten": "node run.mjs --flatten"
+  },
+  "devDependencies": {
+    "@langchain/core": "1.2.20",
+    "@langchain/textsplitters": "1.0.2",
+    "@meddevkit/chunker": "workspace:*"
+  }
+}
