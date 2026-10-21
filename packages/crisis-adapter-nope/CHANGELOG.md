@@ -4,6 +4,10 @@
 
 ### Minor Changes
 
+- README: measured results from one local run (Ollama, Q8_0): on the fresh
+  held-out set crisis recall rose from 15/31 to 31/31 and any-flag recall
+  from 36/56 to 53/56; the model added 11/134 everyday/idiom false alarms on
+  the dev set. A `chronic`-to-`concern` mapping was tested and rejected.
 - Initial release (in development, unreviewed): `NopeEdgeAdapter`, a
   `CrisisSecondOpinion` for `screenTextWithSecondOpinion` in
   `@meddevkit/crisis-signals` 0.2, backed by a **self-hosted** nope-edge

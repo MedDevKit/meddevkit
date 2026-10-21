@@ -14,9 +14,10 @@ must never be the only safeguard.
 
 > **Status: in development, unreviewed.** No clinician has reviewed the
 > mapping from the model's output to the screen's levels. Do not describe
-> this adapter, or the screen combined with it, as validated. Combined
-> metrics have not been measured yet: no model runs in this repository's CI.
-> Measure them on your own deployment with [`scripts/eval.mjs`](#evaluating).
+> this adapter, or the screen combined with it, as validated. The combined
+> numbers in [Measured results](#measured-results) come from one run on one
+> machine, not from CI. Measure your own deployment with
+> [`scripts/eval.mjs`](#evaluating).
 
 - `fetch` only: no SDK and no runtime dependencies
 - Works with any OpenAI-compatible chat-completions server: Ollama,
@@ -220,21 +221,74 @@ Why:
 - **It can catch what the patterns miss.** On text it was not written
   against, the offline screen catches about half of crisis statements (see
   the `@meddevkit/crisis-signals` README). The misses are mostly oblique
-  language, and a model may recognise some of them. How many is not yet
-  measured; NopeNet's own figures ("~92% recall, ~75% specificity" for a
-  single call) are self-reported on a test suite it does not name.
+  language. In our run the model caught all 16 crisis statements the
+  patterns missed on the fresh held-out set (see
+  [Measured results](#measured-results)). NopeNet's own figures ("~92%
+  recall, ~75% specificity" for a single call) are self-reported on a test
+  suite it does not name.
 - **A model-only flag is unexplained.** It has no rule id, span, offsets or
   modifiers. Route it to a person on the same footing as any other flag.
 - **Known weaknesses** listed in the model's disclaimer: deep multi-turn
   needles ("~33% detection at 18–25 turns"), "resolution syndrome", and
   implicit, religious or metaphorical ideation. False positives and false
   negatives will occur.
-- **It can raise false alarms** that the offline screen's context handling
-  avoids, for example on grief or negated statements. Measure the combined
-  false-alarm rates before you rely on them.
+- **It raises false alarms** that the offline screen's context handling
+  avoids: about 8% of everyday sentences in our run ("cut myself shaving",
+  "pills with lunch"), rated high severity by the model itself.
+- **It often rates one level too high.** Statements about the past ("I used
+  to cut in high school"), negated statements and some "I can't take it"
+  messages often come back as `crisis`, and mentions of a friend or relative
+  as `concern`. Every flag goes to a person anyway, but expect more `crisis`
+  flags to review than the offline screen alone produces.
 - **English text, one message.** The model card serializes a multi-turn
   conversation into one string (`"User: ...\n\nAI: ...\n\nUser: ..."`). If
   you want that, pass the serialized text yourself.
+
+## Measured results
+
+One run, 2026-10-20: `@meddevkit/crisis-signals` 0.2.0 patterns, this
+adapter's default mapping, the nope-edge Q8_0 GGUF on Ollama, an Apple
+Silicon Mac. All 766 calls succeeded. A warm call took about 1.3 s (the
+first about 3 s). Counts with Wilson 95% confidence intervals:
+
+**Fresh held-out set** (`vectors.heldout.v2.jsonl`, 167 vectors written
+without seeing the patterns; the honest number):
+
+| Metric | Offline screen alone | Combined with nope-edge |
+|---|---|---|
+| Crisis recall | 15/31 = 48% (32–65%) | **31/31 = 100% (89–100%)** |
+| Any-flag recall | 36/56 = 64% (51–76%) | **53/56 = 95% (85–98%)** |
+| Grief false alarms (`crisis`) | 0/14 | 0/14 |
+| Idiom and everyday false alarms | 2/34 = 6% | 2/34 = 6% |
+
+The 3 statements still missed are all threats against the writer from
+another person. This adapter maps nope-edge's `violence` and `abuse` risks
+to `none` (risk involving others is out of scope until v2), so it does not
+raise them.
+
+**Dev set** (`vectors.jsonl`, 534 vectors). The patterns were written
+against this set and catch all of it, so it measures only what the model
+adds in false alarms. The model never saw it:
+
+| Metric | Offline screen alone | Combined with nope-edge |
+|---|---|---|
+| Crisis recall | 172/172 | 172/172 (model alone: 167/172) |
+| Grief false alarms (`crisis`) | 0/28 | 0/28 |
+| Idiom and everyday false alarms | 0/134 | **11/134 = 8.2% (4.6–14.1%)** |
+
+**First held-out set** (`vectors.heldout.jsonl`, 65 vectors): crisis recall
+10/11 → 11/11, any-flag recall 18/19 → 19/19, idiom and everyday false
+alarms 0/16 → 1/16.
+
+**Mapping alternatives tested** (on the dev set only): lowering risks the
+model marks `chronic` to `concern` halved the past-history statements
+raised to `crisis` (9 → 4 of 39), but also dropped model-alone crisis recall
+from 167 to 162 of 172, because the model marks some current crises
+`chronic`. A safety screen should not trade recall for fewer reviews, so the
+mapping is unchanged.
+
+These are synthetic, unreviewed vectors, small samples and one model build.
+They are not a validation.
 
 ## How the text is sent
 
