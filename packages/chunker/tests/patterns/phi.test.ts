@@ -464,7 +464,7 @@ Email: jsmith@email.com`;
       detectPhi('Some text', 'enhanced');
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Enhanced PHI detection requires')
+        expect.stringContaining('Enhanced PHI detection is not available')
       );
 
       consoleSpy.mockRestore();
