@@ -46,9 +46,10 @@ export default function App() {
   const analyzerMode = view === 'analyzer';
 
   const { result, detections, error } = useChunker(text, config);
-  const { naiveResult, brokenPatterns } = useComparison(
+  const { naiveResult, brokenPatterns, medDevKitBrokenPatterns } = useComparison(
     compareMode ? text : '',
     config.maxTokens,
+    result,
   );
 
   const analyzer = useAnalyzer(text, analyzerSettings, analyzerMode);
@@ -166,6 +167,7 @@ export default function App() {
         compareMode={compareMode}
         naiveResult={naiveResult}
         brokenPatterns={brokenPatterns}
+        medDevKitBrokenPatterns={medDevKitBrokenPatterns}
         analyzerMode={analyzerMode}
         analysis={analyzer.run?.analysis}
       />

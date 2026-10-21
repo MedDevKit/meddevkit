@@ -11,6 +11,8 @@ interface SummaryBarProps {
   compareMode?: boolean;
   naiveResult?: NaiveChunkerResult;
   brokenPatterns?: BrokenPattern[];
+  /** Same detection on MedDevKit's chunks; omitted from the footer when null */
+  medDevKitBrokenPatterns?: BrokenPattern[] | null;
   /** Analyzer view: show entity counts for this analysis */
   analyzerMode?: boolean;
   analysis?: MedicalAnalysisResult | null;
@@ -22,6 +24,7 @@ export default function SummaryBar({
   compareMode,
   naiveResult,
   brokenPatterns,
+  medDevKitBrokenPatterns,
   analyzerMode,
   analysis,
 }: SummaryBarProps) {
@@ -43,12 +46,26 @@ export default function SummaryBar({
     // Document-level counts: per-chunk lists also include items in the overlap text
     const vitalsPreserved = metadata.vitalsDetected;
     const medsPreserved = metadata.medicationsDetected;
-    const uniqueBroken = new Set(brokenPatterns.map((bp) => bp.originalText)).size;
+    const countUnique = (patterns: BrokenPattern[]) =>
+      new Set(patterns.map((bp) => bp.originalText)).size;
 
     const stats = [
-      { label: 'Generic', value: naiveResult.totalChunks, icon: '□', color: 'text-orange-600' },
-      { label: 'MedDevKit', value: metadata.totalChunks, icon: '□', color: 'text-emerald-600' },
-      { label: 'Broken Patterns', value: uniqueBroken, icon: '⚠', color: 'text-orange-600' },
+      {
+        label: 'broken by generic splitter',
+        value: countUnique(brokenPatterns),
+        icon: '⚠',
+        color: 'text-orange-600',
+      },
+      ...(medDevKitBrokenPatterns
+        ? [
+            {
+              label: 'broken by MedDevKit',
+              value: countUnique(medDevKitBrokenPatterns),
+              icon: '✓',
+              color: 'text-emerald-600',
+            },
+          ]
+        : []),
       { label: 'Vitals Preserved', value: vitalsPreserved, icon: '💙', color: 'text-emerald-600' },
       { label: 'Meds Preserved', value: medsPreserved, icon: '💊', color: 'text-emerald-600' },
     ];

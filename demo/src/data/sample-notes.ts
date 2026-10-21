@@ -240,7 +240,20 @@ PLAN:
 - Continue home Metoprolol 25 mg PO BID
 - Cardiology consult`;
 
-export type PresetKey = 'complex' | 'phi' | 'simple' | 'vitals' | 'negations' | 'meds';
+export const TRIAGE_NOTE = `ED TRIAGE NOTE
+Arrival: 14:52 via EMS. Synthetic patient: Test Patient Alpha, 67 y/o male.
+
+CHIEF COMPLAINT: Shortness of breath and fever x 3 days
+
+TRIAGE ASSESSMENT:
+Pt brought in by EMS from home after wife called 911 for worsening shortness of breath, states he has had a productive cough with yellow-green sputum and fevers since Saturday, got much worse overnight and now cannot finish a sentence without stopping to breathe, EMS found him tripoding on the couch with BP 158/94 mmHg and HR 108 bpm, RR 22, Temp 38.4 C, O2 sat 91% on room air which came up to 95% on 4L NC en route, he used his albuterol inhaler every two hours with minimal relief and took ibuprofen 400 mg at 0600, also takes metoprolol 25 mg PO BID and lisinopril 20 mg daily for hypertension, last metoprolol dose this morning, denies chest pain but reports pleuritic discomfort on the right with coughing, denies leg swelling, no recent travel or surgery, former 30 pack-year smoker, quit 10 years ago, wife at bedside and states he seemed more confused than usual this morning.
+
+ALLERGIES: Penicillin (hives)
+
+TRIAGE ACUITY: ESI 2
+Placed in room 14 on continuous pulse oximetry and cardiac monitor, 4L NC continued. Sepsis screen positive, charge RN and ED attending notified at 15:01. Repeat vitals at 15:05 BP 150/90 mmHg, HR 104 bpm, Temp 38.6 C, O2 sat 94% on 4L NC. Acetaminophen 1000 mg PO given at 15:08 for fever. Blood cultures x2, lactate and CBC drawn, chest x-ray ordered.`;
+
+export type PresetKey = 'complex' | 'phi' | 'simple' | 'vitals' | 'negations' | 'meds' | 'triage';
 
 export const PRESETS: Record<PresetKey, { label: string; note: string; description: string }> = {
   complex: {
@@ -272,5 +285,10 @@ export const PRESETS: Record<PresetKey, { label: string; note: string; descripti
     label: 'Meds & Course',
     note: MEDS_NOTE,
     description: 'Medication doses, symptom timeline, severity',
+  },
+  triage: {
+    label: 'ED Triage',
+    note: TRIAGE_NOTE,
+    description: 'Run-on triage narrative with inline vitals and med doses',
   },
 };

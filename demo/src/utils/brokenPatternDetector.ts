@@ -1,5 +1,19 @@
-import { detectVitals, detectSections, detectMedications } from '@meddevkit/chunker';
-import type { NaiveChunk } from './naiveChunker';
+import {
+  detectVitals,
+  detectSections,
+  detectMedications,
+  normalizeText,
+  type ChunkingResult,
+} from '@meddevkit/chunker';
+
+/**
+ * Minimal chunk shape the detector needs: a [startOffset, endOffset) range
+ * into the text being checked. Ranges may overlap (chunker overlap).
+ */
+export interface ChunkSpan {
+  startOffset: number;
+  endOffset: number;
+}
 
 export interface BrokenPattern {
   type: 'vital' | 'section' | 'medication';
@@ -12,11 +26,15 @@ export interface BrokenPattern {
 }
 
 /**
- * Detects where naive chunking has split medical patterns across chunk boundaries.
+ * Detects where chunking has split medical patterns across chunk boundaries.
+ *
+ * A pattern counts as broken only when no single chunk contains it in full.
+ * With overlapping chunks, a pattern cut at one chunk's core boundary is
+ * still intact if the next chunk's overlap prefix carries all of it.
  */
 export function detectBrokenPatterns(
   originalText: string,
-  naiveChunks: NaiveChunk[],
+  naiveChunks: ChunkSpan[],
 ): BrokenPattern[] {
   if (naiveChunks.length <= 1) return [];
 
@@ -54,8 +72,11 @@ function pushBrokenFragments(
   patternStart: number,
   patternEnd: number,
   originalText: string,
-  naiveChunks: NaiveChunk[],
+  naiveChunks: ChunkSpan[],
 ): void {
+  // Intact if any one chunk holds the whole pattern (covers overlap)
+  if (naiveChunks.some((c) => c.startOffset <= patternStart && c.endOffset >= patternEnd)) return;
+
   const spanning = findSpanningChunks(patternStart, patternEnd, naiveChunks);
   if (spanning.length <= 1) return;
 
@@ -81,7 +102,7 @@ function pushBrokenFragments(
 function findSpanningChunks(
   patternStart: number,
   patternEnd: number,
-  chunks: NaiveChunk[],
+  chunks: ChunkSpan[],
 ): number[] {
   const indices: number[] = [];
   for (let i = 0; i < chunks.length; i++) {
@@ -97,4 +118,23 @@ function findSpanningChunks(
 function findLineEnd(text: string, offset: number): number {
   const newline = text.indexOf('\n', offset);
   return newline === -1 ? text.length : newline;
+}
+
+/**
+ * Runs the same broken-pattern detection on MedicalChunker output.
+ *
+ * MedicalChunker offsets refer to normalizeText(originalText), so detection
+ * runs on the normalized text. Each chunk spans from where its text begins
+ * (boundaries.overlapStart when overlap was prepended, else boundaries.start)
+ * to boundaries.end.
+ */
+export function detectBrokenPatternsInChunkingResult(
+  originalText: string,
+  result: ChunkingResult,
+): BrokenPattern[] {
+  const spans: ChunkSpan[] = result.chunks.map((chunk) => ({
+    startOffset: chunk.boundaries.overlapStart ?? chunk.boundaries.start,
+    endOffset: chunk.boundaries.end,
+  }));
+  return detectBrokenPatterns(normalizeText(originalText), spans);
 }
